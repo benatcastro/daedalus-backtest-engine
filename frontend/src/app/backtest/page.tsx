@@ -23,7 +23,6 @@ export default function ChartPage() {
   async function fetchCandleData(from: number, to: number): Promise<Candle[]> {
     const res = await fetch(API);
     const data = res.json()
-    console.log(data)
     return data;
   }
 
@@ -52,7 +51,6 @@ export default function ChartPage() {
     const initialTo = now;
 
     fetchCandleData(initialFrom, initialTo).then((data) => {
-      console.log(data)
       series.setData(data);
       loadedRangeRef.current = { from: initialFrom, to: initialTo };
     });

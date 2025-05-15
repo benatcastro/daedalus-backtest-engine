@@ -44,8 +44,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname().split('/').pop();
   const { data: session } = useSession();
 
-  console.log(pathname)
-  console.log(navItems[0].name.toLowerCase())
   if (!pathname) {
     notFound()
   }

@@ -21,7 +21,7 @@ export default function StrategyCard({ strategy }: { strategy: Strategy }) {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground text-sm">{strategy.description}</p>
-            <p className="text-xs font-medium text-primary mt-2">Engine: {strategy.engine}</p>
+            <p className="text-xs font-medium text-accent-foreground mt-2">Engine: {strategy.engine}</p>
           </CardContent>
         </Card>
     </div>

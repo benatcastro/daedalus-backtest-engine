@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
-import { UploadBacktestButton } from "@/components/upload-backtest-button"
 
 interface Props {
   params: {
@@ -22,10 +21,28 @@ interface Props {
   }
 }
 
+const placeholderData = Array.from({ length: 50 }, (_, i) => {
+  const time = Date.now() - (i * 60 * 60 * 1000); // Generate time in reverse order
+  const open = Math.random() * 100 + 50; // Random open price between 50 and 150
+  const high = open + Math.random() * 10; // Random high price slightly above the open
+  const low = open - Math.random() * 10; // Random low price slightly below the open
+  const close = Math.random() * (high - low) + low; // Random close price between low and high
+
+
+
+  return {
+    time, // Time in milliseconds
+    open: parseFloat(open.toFixed(2)),
+    high: parseFloat(high.toFixed(2)),
+    low: parseFloat(low.toFixed(2)),
+    close: parseFloat(close.toFixed(2)),
+  };
+}).reverse(); // Reverse the array to ensure ascending order by time
+
+
 export default function Page({params}: Props) {
 
   const { id } = useParams()
-  const [search, setSearch] = useState("")
   const { data, error, isLoading} = useSWR<[Strategy, Backtest[]]>([`/api/strategies/${id}/`, `/backtest/${id}`])
 
   if (isLoading) {
@@ -43,33 +60,21 @@ export default function Page({params}: Props) {
   console.log(`loading ${isLoading} error: ${error} fetched data: ${JSON.stringify(strategy)} ${JSON.stringify(backtests)}`)
 
   return (
-    <div className="w-full flex flex-col items-center gap-4">
-      <div className="w-full flex flex-row gap-x-4">
-        <Input
-          placeholder="Search backtests by name, strategy or date..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <UploadBacktestButton strategy={strategy} />
-      </div>
-
-      {backtests.length === 0 ? (
-        <>
-          <a>No backtests found </a>
-          <UploadBacktestButton strategy={strategy}/>
-        </>
-      ) : (
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {backtests.map(bt => (
-            <Card key={bt.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-lg">{bt.id}</h3>
-                <p className="text-sm text-muted-foreground">Strategy: {bt.strategy_id}</p>
-              </CardContent>
-            </Card>
-          ))}
+      <>
+        <div>
+          <h2 className="text-4xl font-bold">{strategy.name}</h2>
+          <Separator className="my-4"/>
         </div>
-      )}
-    </div>
-  )
+        <Card className="w-full h-[64rem]">
+          <CardHeader>
+            <BacktestChooser />
+          </CardHeader>
+          <CardContent>
+            <div className="h-[56rem] w-full">
+              <BacktestHistoricalChart data={placeholderData}/>
+            </div>
+          </CardContent>
+        </Card>
+      </>
+    )
 }

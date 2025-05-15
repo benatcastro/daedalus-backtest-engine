@@ -39,3 +39,10 @@ export const asyncFetcher = async (endpoints: string[]) => {
   const results = Promise.all(requests);
   return results; // This will return an array of responses
 };
+
+export const basePost = (endpoint: string) => {
+  const baseUrl = resolveBaseUrl(endpoint)
+  console.log(`baseUrl -> ${baseUrl} url -> ${endpoint}`)
+  console.warn(`posting to: ${baseUrl}${endpoint}`)
+  return axios.post(`${baseUrl}${endpoint}`).then(res => res.data);
+}
