@@ -1,54 +1,75 @@
-import ClientBacktest from "@/components/ui/client-pages/ClientBacktests"
+'use client'
 import { prisma } from "@/lib/prisma"
+import useSWR from 'swr'
+import { Separator } from "@/components/ui/separator"
+import { useParams } from "next/navigation"
+import { Loader2 } from "lucide-react"
+import { Strategy } from "@prisma/client"
+import Backtest from "@/app/types/backtest"
+import { BacktestChooser } from "@/components/backtest-chooser"
+import BacktestHistoricalChart from "@/components/backtest-historical-chart"
+import { Time } from "lightweight-charts"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const STRAT_BACKEND = "http://127.0.0.1:8000"
-
-type Props = {
+interface Props {
   params: {
-    id: string
+    id: string;
   }
 }
 
-export async function fetchCandles(startIso: string) {
-  const startDate = new Date(startIso);
-  const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+const placeholderData = Array.from({ length: 50 }, (_, i) => {
+  const time = Date.now() - (i * 60 * 60 * 1000); // Generate time in reverse order
+  const open = Math.random() * 100 + 50; // Random open price between 50 and 150
+  const high = open + Math.random() * 10; // Random high price slightly above the open
+  const low = open - Math.random() * 10; // Random low price slightly below the open
+  const close = Math.random() * (high - low) + low; // Random close price between low and high
 
-  const startEpoch = startDate.getTime(); // in milliseconds
-  const endEpoch = endDate.getTime();     // in milliseconds
 
-  console.log(startEpoch, endEpoch)
-  const res = await fetch(
-    `${STRAT_BACKEND}/backtest/1/candles/?symbol=BTC&start=${startEpoch}&end=${endEpoch}`);
 
-  if (!res.ok) {
-    throw new Error(await res.text());
+  return {
+    time, // Time in milliseconds
+    open: parseFloat(open.toFixed(2)),
+    high: parseFloat(high.toFixed(2)),
+    low: parseFloat(low.toFixed(2)),
+    close: parseFloat(close.toFixed(2)),
+  };
+}).reverse(); // Reverse the array to ensure ascending order by time
+
+export default function Page({params}: Props) {
+
+  const { id } = useParams()
+  const { data, error, isLoading} = useSWR<[Strategy, Backtest[]]>([`/api/strategies/${id}/`, `/backtest/${id}`])
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="animate-spin h-12 w-12 text-gray-500" />
+      </div>
+    );
   }
-
-  return res.json();
-}
-
-export default async function Page({params}: Props) {
-
-  const strategyId = Number(params.id)
-  const strategy = await prisma.strategy.findUnique({
-    where:{
-      id: strategyId
-    }
-  })
-  if (!strategy) {
-    return <div>Error finding strategy</div>
+  if (error) {
+    console.error(error)
+    return <p>Error loading strategy.</p>;
   }
-
-
-  console.log(strategy)
-  const res = await fetch(`${STRAT_BACKEND}/backtest/1`);
-  const all_data = await res.json()
-  const data = all_data['totalPerformance']['tradeStatistics']
-  const candles = await fetchCandles(data['startDateTime'])
-  console.log("candles:", candles)
+  const [strategy, backtests] = data!;
+  console.log(`loading ${isLoading} error: ${error} fetched data: ${JSON.stringify(strategy)} ${JSON.stringify(backtests)}`)
 
   return (
-    < ClientBacktest strategy={strategy} data={data} candles={candles}/>
-  )
-
+      <>
+        <div>
+          <h2 className="text-4xl font-bold">{strategy.name}</h2>
+          <Separator className="my-4"/>
+        </div>
+        <Card className="w-full h-[64rem]">
+          <CardHeader>
+            <BacktestChooser />
+          </CardHeader>
+          <CardContent>
+            <div className="h-[56rem] w-full">
+              <BacktestHistoricalChart data={placeholderData}/>
+            </div>
+          </CardContent>
+        </Card>
+      </>
+    )
 }

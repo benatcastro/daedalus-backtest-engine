@@ -52,7 +52,7 @@ async function DisplayMyStrategies({session, userSlug}: { session: Session, user
       return (
         <section className='flex flex-col w-full'>
           {strategies.map((strategy) => (
-            <Link href={`/strategy/${strategy.id}/`}>
+            <Link key={strategy.id} href={`/strategy/${strategy.id}/backtests`}>
               <StrategyCard strategy={strategy} />
             </Link>
           ))}

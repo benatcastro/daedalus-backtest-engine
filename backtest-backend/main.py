@@ -3,6 +3,7 @@ from datetime import datetime
 import pandas as pd
 from routers import backtest
 from fastapi.middleware.cors import CORSMiddleware
+from database import SessionLocal, engine, Base
 
 app = FastAPI()
 app.include_router(backtest.router)

@@ -3,6 +3,22 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// TODO Authentication between microservices
+export async function GET() {
+  try {
+    const strategies = await prisma.strategy.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return NextResponse.json(strategies);
+  } catch (error) {
+    console.error('Error retrieving strategies:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
 // TODO FORM VALIDATION
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)

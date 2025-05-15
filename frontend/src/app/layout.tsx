@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers as SessionProvider } from "@/components/providers/session-providers";
+import { Providers as SessionProvider } from "@/components/providers/session-provider";
+import { SWRProvider } from "@/components/providers/swr-provider";
 import { Providers as ThemeProvider } from "@/components/providers/theme-provider"
 import { TopBar } from "@/components/ui/topbar"
 
@@ -18,19 +19,21 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SessionProvider>
-            <TopBar />
-            <div className="px-16 sm:px-8 lg:px-14">
+        <SWRProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <SessionProvider>
+              <div className="h-screen px-16 sm:px-8 lg:px-14">
+                <TopBar />
                 {children}
-            </div >
-          </SessionProvider>
-        </ThemeProvider>
+              </div>
+            </SessionProvider>
+          </ThemeProvider>
+        </SWRProvider>
       </body>
     </html>
   );

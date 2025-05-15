@@ -1,12 +1,46 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from datetime import datetime
-import re
 from backtest_analyzers.lean_analyzer.LeanBacktestAnalyzer import *
-import os
-import json
+from database import get_db
+from sqlalchemy.orm import Session
+from schemas.backtest import BacktestCreate, StrategyEngine, BacktestRead
+from models import Backtest
+from typing import List
 
-router = APIRouter()
 
+router = APIRouter(prefix="/backtest")
+
+# CRUD for stratagies -> next js
+# CRUD for backtests -> fast api
+
+# TODO
+# Retrieve backtest info
+# Retrieve the historical data used for a backtest (candles)
+@router.get("/{backtest_id}/")
+async def get_candles_for_backtes(symbol: str, start: int, end: int):
+	pass
+
+# Upload a new backtest for a strategy
+@router.post("/")
+async def create_backtest(backtest: BacktestCreate, db: Session = Depends(get_db)):
+	db_backtest = Backtest(
+		engine=backtest.engine,
+		strategy_id = backtest.strategy_id,
+		parameters=backtest.parameters
+	)
+	db.add(db_backtest)
+	db.commit()
+	print(backtest)
+
+
+# Retrieve all backtests of a strategy
+@router.get("/{strategy_id}", response_model=List[BacktestRead])
+async def get_backtests_by_strategy(strategy_id: int, db: Session = Depends(get_db)):
+    backtests = db.query(Backtest).filter(Backtest.strategy_id == strategy_id).all()
+    return backtests
+
+
+"""
 @router.get("/backtest/{backtest_id}/")
 async def get_strat_info():
 	with open("./sample/backtest/1217966458-summary.json") as json_file:
@@ -72,3 +106,6 @@ async def get_candles(symbol: str, start: int, end: int):
 
 
 	return result[1::]
+"""
+
+

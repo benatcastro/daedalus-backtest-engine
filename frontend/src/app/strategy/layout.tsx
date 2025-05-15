@@ -12,26 +12,32 @@ const navItems = [
   { name: "Settings", href: "/todo" },
 ];
 
+
 type NavLabelProps = {
-  item: {name: string, href: string},
-  pathname: string
-}
+  item: { name: string; href: string };
+  pathname: string;
+};
 
-function NavLabel( {item, pathname}: NavLabelProps) {
-
- return(
+function NavLabel({ item, pathname }: NavLabelProps) {
+  return (
     <div className="flex-row">
       <Link
-      href={item.href}
-      className={cn(
-        "text-sm font-medium transition-colors hover:text-primary",
-        pathname === item.name.toLowerCase() ? "text-primary" : "text-muted-foreground")}
+        href={item.href}
+        className={cn(
+          "text-sm font-medium transition-colors hover:text-primary",
+          pathname === item.name.toLowerCase() ? "text-primary" : "text-muted-foreground"
+        )}
       >
-      {item.name}
+        {item.name}
       </Link>
-      <div className={cn("w-full  h-1", pathname === item.name.toLowerCase() ? "bg-accent-foreground" : "bg-accent")} />
+      <div
+        className={cn(
+          "w-full h-1",
+          pathname === item.name.toLowerCase() ? "bg-accent-foreground" : "bg-accent"
+        )}
+      />
     </div>
-    )
+  );
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -48,17 +54,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <header className="w-full border-b border-border bg-background">
-      <div className="max-w-screen mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between">
-        <nav className="hidden md:flex items-center gap-4">
-        {navItems.map((item) => (
-          NavLabel({item, pathname})
-        ))}
-        </nav>
+        <div className="max-w-screen h-12 flex items-center justify-between">
+          <nav className="hidden md:flex items-center gap-4">
+            {navItems.map((item) =>
+              <NavLabel key={item.name} item={item} pathname={pathname} />
+            )}
+          </nav>
+        </div>
+      </header>
+      <div className="px-16 sm:px-8 lg:px-64 pt-8">
+        {children}
       </div>
-    </header>
-    <main>
-      {children}
-    </main>
     </>
   )
 
