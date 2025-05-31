@@ -37,37 +37,39 @@ async def upload_backtest(
     print(f'Description: {description}')
     print(f'Engine: {engine}')
     print(f'Strategy ID: {strategy_id}')
+
     saver: BacktestSaver = BacktestSaverFactory.create(
         engine,
         name=name,
         description=description,
         strategy_id=strategy_id,
         files=files)
+
     await saver.process()
 
+    print(f"dates: [{saver.get_starting_date()}] [{saver.get_ending_date()}]")
+    new_backtest = BacktestCreate(
+			name=saver.get_name(),
+			description=saver.get_description(),
+			starting_date=saver.get_starting_date(),
+			ending_date=saver.get_ending_date(),
+            engine=saver.get_engine(),
+			strategy_id=strategy_id,
+            parameters=saver.get_parameters())
+    print(f"New Backtest: {new_backtest}")
 
-    for file in files:
+    db = get_db()
 
-        content = await file.read()
+    # Add to the session
+    db.add(new_backtest)
 
-    return {
-        "strategy_id": strategy_id,
-        "engine": engine.value,
-        "name": name,
-        "description": description,
-        "filenames": [file.filename for file in files],
-    }
+    # Commit the transaction
+    db.commit()
 
-    """
-        db_backtest = Backtest(
-            engine=backtest.engine,
-            strategy_id = backtest.strategy_id,
-            parameters=backtest.parameters
-        )
-        db.add(db_backtest)
-        db.commit()
-    """
-    pass
+    # Refresh to get the updated instance (e.g., to get auto-generated id)
+    db.refresh(new_backtest)
+
+    return new_backtest
 
 
 # Retrieve all backtests of a strategy

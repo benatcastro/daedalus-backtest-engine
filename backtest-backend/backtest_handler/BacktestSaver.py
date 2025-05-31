@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from backtest_handler.BacktestEngine import BacktestEngine
 from typing import Dict
+from schemas.backtest import BacktestCreate
 import datetime
 
 class BacktestSaver(ABC):
@@ -36,5 +37,7 @@ class BacktestSaver(ABC):
 	def get_parameters(self) -> Dict:
 		pass
 
+	def get_backtest_create_schema(self) -> BacktestCreate:
+		return
 
 

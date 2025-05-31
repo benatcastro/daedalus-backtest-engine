@@ -113,8 +113,8 @@ class LeanBacktestSaver(BacktestSaver):
 	def get_ending_date(self) -> datetime:
 		return self._ending_date
 
-	def get_parameters():
-		pass
+	def get_parameters(self):
+		return {"test_param": "holahola"}
 
 
 	async def _get_json_data(self, file: UploadFile) -> Dict[Any, Any]:
