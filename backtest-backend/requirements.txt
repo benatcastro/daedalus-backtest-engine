@@ -3,3 +3,5 @@ pandas==2.2.3
 pydantic==2.11.5
 quantconnect_stubs==17074
 SQLAlchemy==2.0.41
+uvicorn==0.22.0
+alembic==1.12.1
