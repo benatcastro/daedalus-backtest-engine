@@ -25,13 +25,14 @@ async def get_candles_for_backtes(symbol: str, start: int, end: int):
     pass
 
 # Upload a new backtest for a strategy
-@router.post("/")
+@router.post("/", response_model=BacktestRead)
 async def upload_backtest(
     engine: BacktestEngine = Form(...),
     strategy_id: int = Form(...),
     name: str = Form(...),
     description: Optional[str] = Form(None),
-    files: List[UploadFile] = File(...)
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db)
 ):
     print(f'Name: {name}')
     print(f'Description: {description}')
@@ -48,17 +49,22 @@ async def upload_backtest(
     await saver.process()
 
     print(f"dates: [{saver.get_starting_date()}] [{saver.get_ending_date()}]")
-    new_backtest = BacktestCreate(
-			name=saver.get_name(),
-			description=saver.get_description(),
-			starting_date=saver.get_starting_date(),
-			ending_date=saver.get_ending_date(),
-            engine=saver.get_engine(),
-			strategy_id=strategy_id,
-            parameters=saver.get_parameters())
-    print(f"New Backtest: {new_backtest}")
 
-    db = get_db()
+    # TODO: Research optimal way to handle model validation and creation
+    # Step 1: Validate data using Pydantic schema
+    backtest_data = BacktestCreate(
+        name=saver.get_name(),
+        description=saver.get_description(),
+        starting_date=saver.get_starting_date(),
+        ending_date=saver.get_ending_date(),
+        engine=saver.get_engine(),
+        strategy_id=strategy_id,
+        parameters=saver.get_parameters()
+    )
+
+    # Step 2: Create SQLAlchemy model instance from validated data
+    new_backtest = Backtest(**backtest_data.model_dump())
+    print(f"New Backtest: {new_backtest}")
 
     # Add to the session
     db.add(new_backtest)
