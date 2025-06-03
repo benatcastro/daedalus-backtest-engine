@@ -44,7 +44,7 @@ export async function uploadBacktest(
     formData.append("files", file);
   });
 
-  const url = "http://localhost:8000/backtest/"
+  const url = `${process.env.BACKTEST_API_URL}/backtest/`
   console.log(`BACKTEST_API_URL: ${url}`)
   const res = await axiosInstance.post(
     url,

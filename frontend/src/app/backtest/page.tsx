@@ -13,7 +13,7 @@ type Candle = {
 
 const SYMBOL = 'BTCUSD';
 const RESOLUTION = '1m';
-const API = "http://127.0.0.1:8000/backtest/1/data/BTC?start=1727733600&end=1727906400"
+const API = `${process.env.BACKTEST_API_URL}/backtest/1/data/BTC?start=1727733600&end=1727906400`
 
 export default function ChartPage() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
