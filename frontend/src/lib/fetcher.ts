@@ -3,7 +3,7 @@ import axios from './axios';
 function resolveBaseUrl(endpoint: string) {
   let baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
   if (endpoint.includes('/backtest/')) {
-    baseUrl = "http://localhost:8000"
+    baseUrl = process.env.BACKTEST_API_URL
   }
   return baseUrl
 }
