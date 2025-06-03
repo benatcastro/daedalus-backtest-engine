@@ -79,7 +79,6 @@ export function BacktestFileUpload({ form }: BacktestFileUploadProps) {
     const newFiles = dt.files;
 
     setSelectedFiles(newFiles.length > 0 ? newFiles : null);
-
     // Only set the value if there are files, otherwise reset the field
     if (newFiles.length > 0) {
       form.setValue("files", newFiles, { shouldValidate: true });
