@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for backtests (FastAPI backend)
+  postgres-backtests:
+    image: postgres:latest
+    container_name: daedalus-postgres-backtests
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${BACKTEST_DB_NAME}
+      POSTGRES_USER: ${BACKTEST_DB_USER}
+      POSTGRES_PASSWORD: ${BACKTEST_DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_backtests_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - daedalus-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${BACKTEST_DB_USER} -d ${BACKTEST_DB_NAME}" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL Database for Next.js application (user data, auth, etc.)
+  postgres-nextjs:
+    image: postgres:latest
+    container_name: daedalus-postgres-nextjs
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${NEXTAUTH_DB_NAME}
+      POSTGRES_USER: ${NEXTAUTH_DB_USER}
+      POSTGRES_PASSWORD: ${NEXTAUTH_DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_nextjs_data:/var/lib/postgresql/data
+    networks:
+      - daedalus-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${NEXTAUTH_DB_USER} -d ${NEXTAUTH_DB_NAME}" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # pgAdmin for database administration
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: daedalus-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - daedalus-network
+    depends_on:
+      - postgres-backtests
+      - postgres-nextjs
+
+volumes:
+  postgres_backtests_data:
+    driver: local
+  postgres_nextjs_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  daedalus-network:
+    driver: bridge
