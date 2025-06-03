@@ -106,14 +106,17 @@ class LeanBacktestSaver(BacktestSaver):
 
 
 	# Handle if the backtest is not processed
-	def get_starting_date(self) -> datetime:
+	@property
+	def starting_date(self) -> datetime:
 		return self._starting_date
 
 	# Handle if the backtest is not processed
-	def get_ending_date(self) -> datetime:
+	@property
+	def ending_date(self) -> datetime:
 		return self._ending_date
 
-	def get_parameters(self):
+	@property
+	def parameters(self):
 		return {"test_param": "holahola"}
 
 

@@ -13,28 +13,37 @@ class BacktestSaver(ABC):
 		super().__init__()
 
 	@abstractmethod
-	def get_starting_date(self) -> datetime:
-		pass
-
-	@abstractmethod
 	async def process(self):
 		pass
+	@property
+	def name(self) -> str:
+		return self._name
 
+	@property
+	def description(self) -> str:
+		return self._description
+
+	@property
+	def engine(self) -> BacktestEngine:
+		return self._engine
+
+	@property
+	def strategy_id(self) -> int:
+		return self._strategy_id
+
+	@property
 	@abstractmethod
-	def get_ending_date(self) -> datetime:
+	def starting_date(self) -> datetime:
 		pass
 
-	def get_name(self) -> str:
-		pass
-
-	def get_description(self) -> str:
-		pass
-
-	def get_engine(self) -> BacktestEngine:
-		pass
-
+	@property
 	@abstractmethod
-	def get_parameters(self) -> Dict:
+	def ending_date(self) -> datetime:
+		pass
+
+	@property
+	@abstractmethod
+	def parameters(self) -> Dict:
 		pass
 
 	def get_backtest_create_schema(self) -> BacktestCreate:
