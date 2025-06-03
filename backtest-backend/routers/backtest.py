@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from datetime import datetime
 #from backtest_handler.lean.LeanBacktestSaver import *
 from database import get_db
@@ -39,6 +39,14 @@ async def upload_backtest(
     print(f'Engine: {engine}')
     print(f'Strategy ID: {strategy_id}')
 
+    """
+    try:
+        engine_enum = BacktestEngine(engine)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid engine: {engine}")
+    """
+
+
     saver: BacktestSaver = BacktestSaverFactory.create(
         engine,
         name=name,
@@ -46,35 +54,35 @@ async def upload_backtest(
         strategy_id=strategy_id,
         files=files)
 
+    print("\n--- SAVER INPUTS ---")
+    print(f"name: {name} ({type(name)})")
+    print(f"description: {description} ({type(description)})")
+    print(f"strategy_id: {strategy_id} ({type(strategy_id)})")
+    print(f"parameters: {saver.parameters} ({type(saver.parameters)})")
+    print("--- END SAVER INPUTS ---\n")
+
     await saver.process()
 
-    print(f"dates: [{saver.get_starting_date()}] [{saver.get_ending_date()}]")
-
-    # TODO: Research optimal way to handle model validation and creation
     # Step 1: Validate data using Pydantic schema
     backtest_data = BacktestCreate(
-        name=saver.get_name(),
-        description=saver.get_description(),
-        starting_date=saver.get_starting_date(),
-        ending_date=saver.get_ending_date(),
-        engine=saver.get_engine(),
-        strategy_id=strategy_id,
-        parameters=saver.get_parameters()
+        name=saver.name,
+        description=saver.description,
+        starting_date=saver.starting_date,
+        ending_date=saver.ending_date,
+        engine=saver.engine,
+        strategy_id=saver.strategy_id,
+        parameters=saver.parameters
     )
+    print(f"Validated BacktestCreate: {backtest_data}")
 
     # Step 2: Create SQLAlchemy model instance from validated data
     new_backtest = Backtest(**backtest_data.model_dump())
-    print(f"New Backtest: {new_backtest}")
+    print(f"New Backtest ORM: {new_backtest}")
 
     # Add to the session
     db.add(new_backtest)
-
-    # Commit the transaction
     db.commit()
-
-    # Refresh to get the updated instance (e.g., to get auto-generated id)
     db.refresh(new_backtest)
-
     return new_backtest
 
 
