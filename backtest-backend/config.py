@@ -48,11 +48,17 @@ class Settings(BaseSettings):
 
     # File paths
     UPLOAD_DIR: str = "./uploads"  # Default value, can be overridden in .env
-    # Read settings from .env file
+    CORS_ORIGINS: str
 
-
-
-
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Return CORS_ORIGINS as a list, regardless of .env format."""
+        origins = self.CORS_ORIGINS
+        if isinstance(origins, str):
+            self.CORS_ORIGINS = [origin.strip() for origin in origins.split(",") if origin.strip()]
+        if isinstance(origins, list):
+            self.CORS_ORIGINS = origins
+        self.CORS_ORIGINS
 
 # Create a global settings instance
 settings = Settings()

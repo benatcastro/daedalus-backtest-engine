@@ -1,9 +1,9 @@
 import axios from './axios';
 
 function resolveBaseUrl(endpoint: string) {
-  let baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+  let baseUrl = process.env.NEXT_PUBLIC_NEXT_API_URL
   if (endpoint.includes('/backtest/')) {
-    baseUrl = process.env.BACKTEST_API_URL
+    baseUrl = process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL
   }
   return baseUrl
 }
