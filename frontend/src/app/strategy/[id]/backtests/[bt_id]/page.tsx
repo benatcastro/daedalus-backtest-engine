@@ -1,20 +1,17 @@
 'use client'
-import { prisma } from "@/lib/prisma"
 import useSWR from 'swr'
 import { Separator } from "@/components/ui/separator"
 import { useParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { Strategy } from "@prisma/client"
 import Backtest from "@/app/types/backtest"
-import BacktestEngine from "@/app/types/backtest-engine"
 import { BacktestChooser } from "@/components/backtest-chooser"
-import BacktestHistoricalChart from "@/components/backtest-historical-chart"
 import { Time } from "lightweight-charts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import BacktestChart from "@/components/backtest-chart"
+import { CandlestickData } from "lightweight-charts"
+import { useMemo } from "react"
+import { generateSampleCandlestickData } from "@/utils/sample-data-generator"
 
 interface Props {
   params: {
@@ -26,6 +23,17 @@ export default function Page({params}: Props) {
 
   const { id } = useParams()
   const { data, error, isLoading} = useSWR<[Strategy, Backtest[]]>([`/api/strategies/${id}/`, `/api/v1/backtest/${id}`])
+
+  // Generate sample data for chart demonstration (memoized to prevent regeneration)
+  const candlestickData = useMemo(() => {
+    // Create a date range for the last 3 months
+    const endDate = new Date()
+    const startDate = new Date()
+    startDate.setMonth(startDate.getMonth() - 3)
+
+    return generateSampleCandlestickData({ start: startDate, end: endDate })
+
+  }, []) // Empty dependency array means this only runs once
 
   if (isLoading) {
     return (
@@ -48,16 +56,7 @@ export default function Page({params}: Props) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold">{strategy.name} - Backtest</h1>
-            <p className="text-xs text-muted-foreground">Backtest ID: {params.id}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <BacktestChooser />
-            <Button variant="outline" size="sm">
-              Export
-            </Button>
-            <Button variant="outline" size="sm">
-              Share
-            </Button>
+            <p className="text-xs text-muted-foreground">Backtest ID: {id}</p>
           </div>
         </div>
       </div>
@@ -84,11 +83,12 @@ export default function Page({params}: Props) {
         </div>
 
         {/* Main Chart Area */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 bg-background p-4">
-            <div className="w-full h-full border rounded bg-muted/20 flex items-center justify-center">
-              <span className="text-muted-foreground">Main Chart Area (Candlestick + Bot Moves)</span>
-            </div>
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 bg-background p-4 min-h-0">
+            <BacktestChart
+              candlestickData={candlestickData}
+              className="w-full h-full border rounded"
+            />
           </div>
         </div>
 
@@ -147,7 +147,7 @@ export default function Page({params}: Props) {
           </div>
         </div>
       </div>
-      
+
       {/* Bottom Timeline Navigator & Event Markers */}
       <div className="h-32 border-t bg-muted/30 p-4 flex-shrink-0">
         <div className="h-full border rounded bg-background flex items-center justify-center">
