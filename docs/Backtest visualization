@@ -1,0 +1,14 @@
+Backtest visualization
+
+┌─────────────────────────────────────────────────────────┐
+│ Header: Backtest Name, Controls, Mobile Menu           │
+├──────┬──────────────────────────────────────────┬──────┤
+│      │                                          │      │
+│ Tool │           Main Chart Area               │ Info │
+│ bar  │        (Candlestick + Bot Moves)        │Panel │
+│      │                                          │ (R)  │
+│ (L)  │                                          │      │
+│      │                                          │      │
+├──────┴──────────────────────────────────────────┴──────┤
+│           Timeline Navigator & Event Markers            │
+└─────────────────────────────────────────────────────────┘
