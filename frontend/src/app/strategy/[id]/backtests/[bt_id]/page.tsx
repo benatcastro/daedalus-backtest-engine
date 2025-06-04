@@ -22,29 +22,10 @@ interface Props {
   }
 }
 
-const placeholderData = Array.from({ length: 50 }, (_, i) => {
-  const time = Date.now() - (i * 60 * 60 * 1000); // Generate time in reverse order
-  const open = Math.random() * 100 + 50; // Random open price between 50 and 150
-  const high = open + Math.random() * 10; // Random high price slightly above the open
-  const low = open - Math.random() * 10; // Random low price slightly below the open
-  const close = Math.random() * (high - low) + low; // Random close price between low and high
-
-
-
-  return {
-    time, // Time in milliseconds
-    open: parseFloat(open.toFixed(2)),
-    high: parseFloat(high.toFixed(2)),
-    low: parseFloat(low.toFixed(2)),
-    close: parseFloat(close.toFixed(2)),
-  };
-}).reverse(); // Reverse the array to ensure ascending order by time
-
-
 export default function Page({params}: Props) {
 
   const { id } = useParams()
-  const { data, error, isLoading} = useSWR<[Strategy, Backtest[]]>([`/api/strategies/${id}/`, `/backtest/${id}`])
+  const { data, error, isLoading} = useSWR<[Strategy, Backtest[]]>([`/api/strategies/${id}/`, `/api/v1/backtest/${id}`])
 
   if (isLoading) {
     return (
@@ -61,21 +42,118 @@ export default function Page({params}: Props) {
   console.log(`loading ${isLoading} error: ${error} fetched data: ${JSON.stringify(strategy)} ${JSON.stringify(backtests)}`)
 
   return (
-      <>
-        <div>
-          <h2 className="text-4xl font-bold">{strategy.name}</h2>
-          <Separator className="my-4"/>
-        </div>
-        <Card className="w-full h-[64rem]">
-          <CardHeader>
+    <div className="h-full flex flex-col bg-background">
+      {/* Header: Backtest Name, Controls, Mobile Menu */}
+      <div className="border-b bg-background p-4 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold">{strategy.name} - Backtest</h1>
+            <p className="text-xs text-muted-foreground">Backtest ID: {params.id}</p>
+          </div>
+          <div className="flex items-center gap-2">
             <BacktestChooser />
-          </CardHeader>
-          <CardContent>
-            <div className="h-[56rem] w-full">
-              <BacktestHistoricalChart data={placeholderData}/>
+            <Button variant="outline" size="sm">
+              Export
+            </Button>
+            <Button variant="outline" size="sm">
+              Share
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex overflow-hidden flex-1">
+        {/* Left Toolbar */}
+        <div className="w-16 border-r bg-muted/30 flex flex-col items-center py-4 gap-2">
+          <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
+            Tool
+          </div>
+          <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
+            Line
+          </div>
+          <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
+            Rect
+          </div>
+          <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
+            Text
+          </div>
+          <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
+            Arrow
+          </div>
+        </div>
+
+        {/* Main Chart Area */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 bg-background p-4">
+            <div className="w-full h-full border rounded bg-muted/20 flex items-center justify-center">
+              <span className="text-muted-foreground">Main Chart Area (Candlestick + Bot Moves)</span>
             </div>
-          </CardContent>
-        </Card>
-      </>
-    )
+          </div>
+        </div>
+
+        {/* Right Info Panel */}
+        <div className="w-80 border-l bg-muted/30 p-4">
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold mb-2">Backtest Info</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Engine:</span>
+                  <span className="text-muted-foreground">LEAN</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Period:</span>
+                  <span className="text-muted-foreground">1Y</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Return:</span>
+                  <span className="text-green-600">+12.5%</span>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <h3 className="font-semibold mb-2">Performance</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Sharpe Ratio:</span>
+                  <span className="text-muted-foreground">1.42</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Max Drawdown:</span>
+                  <span className="text-red-600">-8.3%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Win Rate:</span>
+                  <span className="text-muted-foreground">68%</span>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <h3 className="font-semibold mb-2">Annotations</h3>
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground">No annotations yet</div>
+                <Button variant="outline" size="sm" className="w-full">
+                  Add Note
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Bottom Timeline Navigator & Event Markers */}
+      <div className="h-32 border-t bg-muted/30 p-4 flex-shrink-0">
+        <div className="h-full border rounded bg-background flex items-center justify-center">
+          <span className="text-muted-foreground">Timeline Navigator & Event Markers</span>
+        </div>
+      </div>
+    </div>
+  )
 }

@@ -21,19 +21,21 @@ export default function ModeToggle() {
 
 
   return (
-      <main className="h-full bg-background text-foreground flex flex-col items-center justify-center px-3">
-      <section className="text-center max-w-xl">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Backtest Analyzer
-        </h1>
-        <p className="mt-4 text-muted-foreground">
-          Visualize and analyze your algorithmic trading strategy results with interactive charts and insights.
-        </p>
-        <div className="mt-6 flex justify-center gap-4">
-          <Button>Get Started</Button>
-          <Button variant="outline">Learn More</Button>
+      <main className="h-full bg-background text-foreground flex flex-col items-center justify-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <section className="text-center max-w-xl mx-auto">
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Backtest Analyzer
+            </h1>
+            <p className="mt-4 text-muted-foreground">
+              Visualize and analyze your algorithmic trading strategy results with interactive charts and insights.
+            </p>
+            <div className="mt-6 flex justify-center gap-4">
+              <Button>Get Started</Button>
+              <Button variant="outline">Learn More</Button>
+            </div>
+          </section>
         </div>
-      </section>
     </main>
   )
 }

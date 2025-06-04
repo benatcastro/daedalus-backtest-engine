@@ -41,8 +41,8 @@ async function DisplayMyStrategies({session, userSlug}: { session: Session, user
     })
     if (strategies.length === 0)
       return (
-        <div className='flex-row content-center'>
-          <p>You don't have any stragies</p>
+        <div className='text-center space-y-4'>
+          <p className="text-muted-foreground">You don't have any strategies</p>
           <Link href={`/users/${userSlug}/strategies/new`}>
             <Button>New Strategy</Button>
           </Link>
@@ -50,13 +50,15 @@ async function DisplayMyStrategies({session, userSlug}: { session: Session, user
     )
     else {
       return (
-        <section className='flex flex-col w-full'>
-          {strategies.map((strategy) => (
-            <Link key={strategy.id} href={`/strategy/${strategy.id}/backtests`}>
-              <StrategyCard strategy={strategy} />
-            </Link>
-          ))}
-        </section>
+        <div className="space-y-4">
+          <div className='flex flex-col gap-4'>
+            {strategies.map((strategy) => (
+              <Link key={strategy.id} href={`/strategy/${strategy.id}/backtests`}>
+                <StrategyCard strategy={strategy} />
+              </Link>
+            ))}
+          </div>
+        </div>
       )
     }
   } catch (error) {
@@ -102,16 +104,20 @@ export default async function Page({ params }: { params: { username: string, q?:
   const query = params.q || "";
 
   return (
-    <main className="grid grid-cols-3 grid-rows-1 w-full h-screen">
-      <section className=''>
-
-      </section>
-      <section className="">
-        <ChooseView userSlug={username}/>
-      </section>
-      <section className=''>
-
-      </section>
+    <main className="h-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <section className=''>
+            {/* Left sidebar - could be used for filters or navigation */}
+          </section>
+          <section className="lg:col-span-1">
+            <ChooseView userSlug={username}/>
+          </section>
+          <section className=''>
+            {/* Right sidebar - could be used for additional content */}
+          </section>
+        </div>
+      </div>
     </main>
   )
 
