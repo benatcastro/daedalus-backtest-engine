@@ -21,7 +21,7 @@ export interface SampleDataOptions {
 /**
  * Generates realistic sample candlestick data for a given date range
  * This serves as a placeholder for backend endpoints during development
- * 
+ *
  * @param dateRange - Start and end dates for the data
  * @param options - Configuration options for data generation
  * @returns Array of candlestick data points
@@ -63,14 +63,14 @@ export function generateSampleCandlestickData(
     const randomChange = (random() - 0.5) * 2 * volatility
     const trendChange = trendFactor
     const totalChange = randomChange + trendChange
-    
+
     const open = currentPrice
     const close = open * (1 + totalChange)
-    
+
     // Generate high and low based on open and close
     const highVolatility = random() * volatility * 0.5
     const lowVolatility = random() * volatility * 0.5
-    
+
     const high = Math.max(open, close) * (1 + highVolatility)
     const low = Math.min(open, close) * (1 - lowVolatility)
 
@@ -185,11 +185,11 @@ export function generateBacktestSampleData(
   // Generate some sample trading events
   const tradingEvents = []
   const eventCount = Math.floor(candlestickData.length * 0.1) // 10% of candles have events
-  
+
   for (let i = 0; i < eventCount; i++) {
     const randomIndex = Math.floor(Math.random() * candlestickData.length)
     const candle = candlestickData[randomIndex]
-    
+
     tradingEvents.push({
       time: candle.time,
       type: Math.random() > 0.5 ? 'buy' as const : 'sell' as const,
