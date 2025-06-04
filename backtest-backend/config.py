@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True # Read from .env
 
     # CORS
-    NEXTJS_URL: str
-    FASTAPI_URL: str
+    NEXT_PUBLIC_NEXT_API_URL: str
+    NEXT_PUBLIC_BACKTEST_BACKEND_URL: str
     CORS_ORIGINS: Optional[List[str]] = None  # Read from .env
 
     # Database
