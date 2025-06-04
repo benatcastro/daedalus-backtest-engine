@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className="h-screen flex flex-col">
         <SWRProvider>
           <ThemeProvider
             attribute="class"
@@ -27,10 +27,10 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <SessionProvider>
-              <div className="h-screen px-16 sm:px-8 lg:px-14">
                 <TopBar />
-                {children}
-              </div>
+                <div className="flex-1 overflow-hidden">
+                  {children}
+                </div>
             </SessionProvider>
           </ThemeProvider>
         </SWRProvider>

@@ -50,20 +50,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <>
-      <header className="w-full border-b border-border bg-background">
-        <div className="max-w-screen h-12 flex items-center justify-between">
-          <nav className="hidden md:flex items-center gap-4">
-            {navItems.map((item) =>
-              <NavLabel key={item.name} item={item} pathname={pathname} />
-            )}
-          </nav>
-        </div>
+    <div className="h-full flex flex-col">
+      <header className="w-full border-b border-border bg-background h-12 flex-shrink-0">
+        <nav className="hidden md:flex items-center gap-4 h-full px-4">
+          {navItems.map((item) =>
+            <NavLabel key={item.name} item={item} pathname={pathname} />
+          )}
+        </nav>
       </header>
-      <div className="px-16 sm:px-8 lg:px-64 pt-8">
+      <div className="flex-1 overflow-hidden">
         {children}
       </div>
-    </>
+    </div>
   )
 
 

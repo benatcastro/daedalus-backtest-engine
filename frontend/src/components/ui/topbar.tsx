@@ -18,47 +18,47 @@ export function TopBar() {
   const { data: session } = useSession();
 
   return (
-    <header className="w-full border-b border-border bg-background">
-      <div className="max-w-screen mx-auto h-16 flex items-center justify-between">
-      <div className="flex items-center gap-6">
-        <span className="font-bold text-xl">QuanticView</span>
-        <nav className="hidden md:flex items-center gap-4">
-        {navItems.map((item) => (
-          <Link
-          key={item.href}
-          href={item.href}
-          className={cn(
-            "text-sm font-medium transition-colors hover:text-primary",
-            pathname === item.href ? "text-primary" : "text-muted-foreground"
-          )}
-          >
-          {item.name}
-          </Link>
-        ))}
-        </nav>
-      </div>
+    <header className="w-full border-b border-border bg-background h-16">
+      <div className="h-full flex items-center justify-between px-4">
+        <div className="flex items-center gap-6">
+          <span className="font-bold text-xl">QuanticView</span>
+          <nav className="hidden md:flex items-center gap-4">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  pathname === item.href ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
-      <div className="flex items-center gap-2">
-        {session?.user ? (
-          <>
-            <Button onClick={() => signOut()} variant="outline" size="sm">
-            Sign Out
-            </Button>
-            <Link href={`/users/${session.user.name}/strategies/new`}>
-              <Image
-                src={session.user.image || "/default-avatar.png"}
-                alt="User Avatar"
-                width={32}
-                height={32}
-                className="rounded-full cursor-pointer"
-              />
+        <div className="flex items-center gap-2">
+          {session?.user ? (
+            <>
+              <Button onClick={() => signOut()} variant="outline" size="sm">
+                Sign Out
+              </Button>
+              <Link href={`/users/${session.user.name}/strategies/new`}>
+                <Image
+                  src={session.user.image || "/default-avatar.png"}
+                  alt="User Avatar"
+                  width={32}
+                  height={32}
+                  className="rounded-full cursor-pointer"
+                />
               </Link>
             </> ) : (
-            <Button onClick={() => signIn()} variant="outline" size="sm">
-            Sign In
-            </Button>
-        )}
-      </div>
+              <Button onClick={() => signIn()} variant="outline" size="sm">
+                Sign In
+              </Button>
+          )}
+        </div>
       </div>
     </header>
     );

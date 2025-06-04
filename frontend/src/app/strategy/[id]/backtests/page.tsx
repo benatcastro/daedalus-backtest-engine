@@ -23,6 +23,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Plus, Eye } from "lucide-react"
 import { UploadBacktestButton } from "@/components/upload-backtest-button"
+import { Container } from "@/components/ui/container"
 import Link from "next/link"
 
 interface Props {
@@ -84,59 +85,64 @@ export default function Page({params}: Props) {
   };
 
   return (
-    <div className="w-full flex flex-col items-center gap-4">
-      <div className="w-full flex flex-row gap-x-4">
-        <Input
-          placeholder="Search backtests by name, description"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <UploadBacktestButton strategy={strategy} />
-      </div>
-
-      {filteredBacktests.length === 0 ? (
-        <>
-          <a>{search ? 'No backtests match your search' : 'No backtests found'} </a>
-          {!search && <UploadBacktestButton strategy={strategy}/>}
-        </>
-      ) : (
-        <div className="w-full">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Date Range</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBacktests.map(bt => (
-                <TableRow key={bt.id} className="hover:bg-muted/50">
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{bt.name}</div>
-                      <div className="text-sm text-muted-foreground">{bt.description}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {formatDateRange(bt.starting_date, bt.ending_date)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/strategy/${id}/backtests/${bt.id}`}>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2">
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+    <Container className="py-6">
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Input
+            placeholder="Search backtests by name, description"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1"
+          />
+          <UploadBacktestButton strategy={strategy} />
         </div>
-      )}
-    </div>
+
+        {filteredBacktests.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">
+              {search ? 'No backtests match your search' : 'No backtests found'}
+            </p>
+            {!search && <UploadBacktestButton strategy={strategy}/>}
+          </div>
+        ) : (
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Date Range</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredBacktests.map(bt => (
+                  <TableRow key={bt.id} className="hover:bg-muted/50">
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{bt.name}</div>
+                        <div className="text-sm text-muted-foreground">{bt.description}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {formatDateRange(bt.starting_date, bt.ending_date)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Link href={`/strategy/${id}/backtests/${bt.id}`}>
+                        <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Eye className="h-4 w-4" />
+                          View
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </Container>
   )
 }
