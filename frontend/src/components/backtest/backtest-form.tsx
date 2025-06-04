@@ -33,7 +33,7 @@ async function uploadBacktest(
     formData.append("files", file);
   });
 
-  const url = "http://localhost:8000/backtest/";
+  const url = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/`;
   const response = await axiosInstance.post(
     url,
     formData,

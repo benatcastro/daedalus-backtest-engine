@@ -26,7 +26,7 @@ export default function Page({params}: Props) {
 
   const { id } = useParams()
   const [search, setSearch] = useState("")
-  const { data, error, isLoading} = useSWR<[Strategy, Backtest[]]>([`/api/strategies/${id}/`, `/backtest/${id}`])
+  const { data, error, isLoading} = useSWR<[Strategy, Backtest[]]>([`/api/strategies/${id}/`, `/api/v1/backtest/${id}`])
 
   if (isLoading) {
     return (
