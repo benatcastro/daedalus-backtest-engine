@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${BACKTEST_DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      - "${BACKTEST_DB_PORT}:5432"
     volumes:
       - postgres_backtests_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -33,7 +33,7 @@ services:
       POSTGRES_PASSWORD: ${NEXTAUTH_DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5433:5432"
+      - "${NEXTAUTH_DB_PORT}:5432"
     volumes:
       - postgres_nextjs_data:/var/lib/postgresql/data
     networks:
