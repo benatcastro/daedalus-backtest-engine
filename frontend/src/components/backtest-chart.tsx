@@ -8,15 +8,11 @@ import {
   ISeriesApi,
   Time,
   IRange,
-  TimeScaleOptions,
 } from 'lightweight-charts'
 import { ChartDataBuffer, DataBounds } from '@/lib/chart-data-buffer'
-import { DataFeed } from '@/lib/data-feed'
 import Backtest from '@/app/types/backtest'
-import { backtestDatesToRange, calculateOptimalInitialViewRange } from '@/utils/sample-data-generator'
-import {
-  useChartTheme,
-} from '@/hooks/use-chart-theme';
+import { generateSampleCandlestickDataFromTimes, backtestDatesToRange, generateSampleCandlestickData, calculateOptimalInitialViewRange } from '@/utils/sample-data-generator'
+
 
 interface BacktestChartProps {
   backtest: Backtest,
@@ -31,47 +27,38 @@ export default function BacktestChart({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const chartOptions = useChartTheme()
 
-  console.warn("Chart options: ", chartOptions)
   const dateRange = backtestDatesToRange(backtest.starting_date, backtest.ending_date)
 
   // Calculate optimal initial view range (5% of total duration or max 1 week)
   const optimalInitialRange = calculateOptimalInitialViewRange(dateRange)
-  console.log("Optimal Initial Range: ", optimalInitialRange)
+  const initialViewRange = {
+    from: optimalInitialRange.start.getTime() / 1000 as Time,
+    to: optimalInitialRange.end.getTime() / 1000 as Time
+  }
+
   const candleStickDataBuffer = useMemo(() => {
     console.log("Use memo for creating the buffer")
 
-    return new DataFeed<CandlestickData>(
-      async (range: IRange<Time>) => {
-        // Create the query params
-        const queryParams = new URLSearchParams({
-          symbol: "ethusdt",
-          start: range.from.toString(),
-          end: range.to.toString(),
-        })
+    // Create bounds for the data buffer
+    const dataBounds = {
+      start: dateRange.start.getTime() / 1000 as Time,
+      end: dateRange.end.getTime() / 1000 as Time
+    }
 
-        // Form the endpoint
-        const endpoint = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/${backtest.id}/candles?${queryParams.toString()}`
 
-        // Do the fetch
-        return fetch(endpoint)
-          .then(res => res.ok ? res.json() : Promise.reject(`HTTP ${res.status}: ${res.statusText}`))
-          .then(data => data.map((candle: any) => ({
-            time: new Date(candle.timestamp).getTime() / 1000 as Time,
-            open: candle.open,
-            high: candle.high,
-            low: candle.low,
-            close: candle.close
-          })));
-      },
+    return new ChartDataBuffer<CandlestickData>(
       {
-        from: (dateRange.start.getTime() / 1000) as Time,
-        to: (dateRange.end.getTime() / 1000) as Time
-      }
+        fetchData: async (start: Time, end: Time): Promise<CandlestickData[]> => {
+          const startDate = new Date((start as number) * 1000);
+          const endDate = new Date((end as number) * 1000);
+          return generateSampleCandlestickData({ start: startDate, end: endDate });
+        }
+      },
+      initialViewRange,
+      generateSampleCandlestickDataFromTimes(initialViewRange.from, initialViewRange.to),
+      dataBounds
     )
-
-
   }, [backtest])
 
 
@@ -84,11 +71,10 @@ export default function BacktestChart({
 
     console.log("Chart options creating chart: ", chartOptions)
     const chart = createChart(chartContainerRef.current, {
-        ...chartOptions,
         width: chartContainerRef.current.clientWidth,
         height: chartContainerRef.current.clientHeight,
-
     });
+    chart.timeScale().fitContent();
 
     const newSeries = chart.addSeries(CandlestickSeries);
     chartRef.current = chart;
@@ -100,38 +86,49 @@ export default function BacktestChart({
       chartRef.current = null;
       seriesRef.current = null;
     };
-  },[backtest, chartOptions])  // Add dependency to re-run when buffer changes
+  },[backtest])  // Add dependency to re-run when buffer changes
 
   // Effect to set initial data when buffer is ready
   useEffect(() => {
-    if (!candleStickDataBuffer || !chartRef.current) return
-    const initialize = async () => {
-      console.log("Setting initial data from buffer:", candleStickDataBuffer)
-      await candleStickDataBuffer.initialize(
-        {
-          from: (optimalInitialRange.start.getTime() / 1000) as Time,
-          to: (optimalInitialRange.end.getTime() / 1000) as Time
-        })
-    }
-    initialize()
-  }, [candleStickDataBuffer, chartRef.current])
+    if (!candleStickDataBuffer || !seriesRef.current) return
+    console.log("Setting initial data from buffer:", candleStickDataBuffer)
+    seriesRef.current.setData(candleStickDataBuffer.data)
+  }, [candleStickDataBuffer])
+
+  // Effect to set up time range change subscription
   useEffect(() => {
-    if (!candleStickDataBuffer || !chartRef.current) return
+    console.log("Setting up subscription effect", {
+      hasChart: !!chartRef.current,
+      hasBuffer: !!candleStickDataBuffer
+    });
 
-    // Subscribe to initial data loaded event to reset the view once
-    candleStickDataBuffer.subscribeToInitialDataLoaded(() => {
-      if (chartRef.current) {
-        console.log("Initial data loaded - resetting view to optimal range")
+    if (!chartRef.current || !candleStickDataBuffer) {
+      console.log("Missing chart or buffer, skipping subscription");
+      return;
+    }
 
-        // Use a small delay to ensure data is fully rendered
-        setTimeout(() => {
-          if (chartRef.current) {
-            chartRef.current.timeScale().setVisibleRange({
-              from: (optimalInitialRange.start.getTime() / 1000) as Time,
-              to: (optimalInitialRange.end.getTime() / 1000) as Time
-            })
-          }
-        }, 50)
+    let isUpdating = false;
+
+    const timeRangeChangeHandler = async (timeRange: IRange<Time> | null) => {
+      console.log("TimeRangeChangeHandler called:", timeRange, "isUpdating:", isUpdating)
+      if (!timeRange || isUpdating) return
+
+      try {
+        isUpdating = true;
+
+        const currentDataLength = candleStickDataBuffer.data.length;
+        await candleStickDataBuffer.updateViewRange(timeRange);
+        const newData = candleStickDataBuffer.data;
+
+        console.log("Data length changed from", currentDataLength, "to", newData.length);
+
+        // Only update chart if data actually changed
+        if (newData.length !== currentDataLength && seriesRef.current) {
+          console.log("Setting new data on series");
+          seriesRef.current.setData(newData);
+        }
+      } finally {
+        isUpdating = false;
       }
     })
   }, [candleStickDataBuffer, chartRef.current, optimalInitialRange])
@@ -147,49 +144,6 @@ export default function BacktestChart({
       console.log("Missing chart or buffer, skipping subscription");
       return;
     }
-
-
-
-
-    let lastNotLoadingViewRange: IRange<Time>;
-
-    const timeRangeChangeHandler = async (timeRange: IRange<Time> | null) => {
-      if (!timeRange) return
-
-      // Obtain the real change in the chart
-      if (!candleStickDataBuffer.isLoading) {
-        lastNotLoadingViewRange = timeRange
-      }
-
-      if (candleStickDataBuffer.isLoading && lastNotLoadingViewRange) {
-        chartRef.current?.timeScale().setVisibleRange(lastNotLoadingViewRange)
-
-      }
-
-      if (!candleStickDataBuffer.isLoading)
-        candleStickDataBuffer.updateDataRange(timeRange)
-    }
-
-    // Subscribe to full data updates (for initial load)
-    candleStickDataBuffer.subscribeToDataUpdates((data: CandlestickData[]) => {
-      if (!seriesRef.current || !chartRef.current) return
-
-      console.log("Full data update - replacing all chart data")
-      seriesRef.current.setData(data)
-    })
-
-    // Subscribe to incremental data appends (for smooth loading of new chunks)
-    candleStickDataBuffer.subscribeToDataAppends((newData: CandlestickData[]) => {
-      if (!seriesRef.current || !chartRef.current || newData.length === 0) return
-
-      console.log(`Appending ${newData.length} new candles to chart using update()`)
-
-      // Use update() method to append each new data point individually
-      // This maintains chart continuity and prevents view jumping
-      newData.forEach(candle => {
-        seriesRef.current?.update(candle)
-      })
-    })
 
     console.log("Subscribing to visible time range changes");
     chartRef.current.timeScale().subscribeVisibleTimeRangeChange(timeRangeChangeHandler)
