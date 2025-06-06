@@ -34,7 +34,7 @@ export function generateSampleCandlestickData(
     basePrice = 100,
     volatility = 0.04,
     trend = 'sideways',
-    intervalMinutes = 1440, // 1 day
+    intervalMinutes = 60, // 1 day
     seed
   } = options
 
@@ -199,4 +199,241 @@ export function generateBacktestSampleData(
   }
 
   return { candlestickData, tradingEvents }
+}
+
+/**
+ * Configuration for paginated data generation
+ */
+export interface PaginationConfig {
+  /** Size of each chunk in hours (default: 24 * 7 = 1 week) */
+  chunkSizeHours?: number
+  /** Maximum number of candles per chunk (default: 1000) */
+  maxCandlesPerChunk?: number
+  /** Overlap between chunks in minutes for smooth transitions (default: 60) */
+  overlapMinutes?: number
+}
+
+/**
+ * Result from paginated data generation
+ */
+export interface PaginatedDataResult {
+  data: CandlestickData[]
+  totalChunks: number
+  currentChunk: number
+  hasNextChunk: boolean
+  hasPreviousChunk: boolean
+  chunkRange: DateRange
+}
+
+/**
+ * Generate candlestick data for a specific chunk/page within a larger date range
+ * This enables efficient loading of large backtests by breaking them into manageable pieces
+ *
+ * @param fullBacktestRange - The complete date range of the backtest
+ * @param chunkIndex - Zero-based index of the chunk to generate (0 = first chunk)
+ * @param paginationConfig - Configuration for chunk size and overlap
+ * @param dataOptions - Options for data generation (volatility, trend, etc.)
+ * @returns Paginated result with chunk data and navigation info
+ */
+export function generatePaginatedCandlestickData(
+  fullBacktestRange: DateRange,
+  chunkIndex: number,
+  paginationConfig: PaginationConfig = {},
+  dataOptions: SampleDataOptions = {}
+): PaginatedDataResult {
+  const {
+    chunkSizeHours = 24 * 7, // 1 week chunks
+    maxCandlesPerChunk = 1000,
+    overlapMinutes = 60
+  } = paginationConfig
+
+  const {
+    intervalMinutes = 60, // 1-hour candles by default
+    ...restDataOptions
+  } = dataOptions
+
+  // Calculate total duration and number of chunks
+  const totalDurationMs = fullBacktestRange.end.getTime() - fullBacktestRange.start.getTime()
+  const chunkDurationMs = chunkSizeHours * 60 * 60 * 1000
+  const totalChunks = Math.ceil(totalDurationMs / chunkDurationMs)
+
+  // Validate chunk index
+  if (chunkIndex < 0 || chunkIndex >= totalChunks) {
+    throw new Error(`Chunk index ${chunkIndex} is out of range (0-${totalChunks - 1})`)
+  }
+
+  // Calculate chunk boundaries
+  const chunkStartMs = fullBacktestRange.start.getTime() + (chunkIndex * chunkDurationMs)
+  const chunkEndMs = Math.min(
+    chunkStartMs + chunkDurationMs,
+    fullBacktestRange.end.getTime()
+  )
+
+  // Add overlap for smooth transitions (except at boundaries)
+  const overlapMs = overlapMinutes * 60 * 1000
+  const actualStartMs = chunkIndex > 0 ? chunkStartMs - overlapMs : chunkStartMs
+  const actualEndMs = chunkIndex < totalChunks - 1 ? chunkEndMs + overlapMs : chunkEndMs
+
+  const chunkRange: DateRange = {
+    start: new Date(actualStartMs),
+    end: new Date(actualEndMs)
+  }
+
+  // Generate data for this chunk
+  const data = generateSampleCandlestickData(chunkRange, {
+    intervalMinutes,
+    ...restDataOptions,
+    // Use chunk-specific seed for consistent data per chunk
+    seed: dataOptions.seed ? dataOptions.seed + chunkIndex : chunkStartMs
+  })
+
+  // Limit candles if necessary (for very long time periods)
+  const limitedData = data.length > maxCandlesPerChunk
+    ? data.slice(0, maxCandlesPerChunk)
+    : data
+
+  return {
+    data: limitedData,
+    totalChunks,
+    currentChunk: chunkIndex,
+    hasNextChunk: chunkIndex < totalChunks - 1,
+    hasPreviousChunk: chunkIndex > 0,
+    chunkRange: {
+      start: new Date(chunkStartMs),
+      end: new Date(chunkEndMs)
+    }
+  }
+}
+
+/**
+ * Generate a range of chunks for smooth scrolling
+ * Useful for preloading adjacent chunks
+ *
+ * @param fullBacktestRange - The complete date range of the backtest
+ * @param centerChunk - The main chunk to center around
+ * @param surroundingChunks - Number of chunks to load on each side (default: 1)
+ * @param paginationConfig - Configuration for chunk generation
+ * @param dataOptions - Options for data generation
+ * @returns Array of paginated results
+ */
+export function generateChunkRange(
+  fullBacktestRange: DateRange,
+  centerChunk: number,
+  surroundingChunks: number = 1,
+  paginationConfig: PaginationConfig = {},
+  dataOptions: SampleDataOptions = {}
+): PaginatedDataResult[] {
+  const results: PaginatedDataResult[] = []
+
+  // Calculate the total number of chunks to determine bounds
+  const totalDurationMs = fullBacktestRange.end.getTime() - fullBacktestRange.start.getTime()
+  const chunkDurationMs = (paginationConfig.chunkSizeHours || 24 * 7) * 60 * 60 * 1000
+  const totalChunks = Math.ceil(totalDurationMs / chunkDurationMs)
+
+  const startChunk = Math.max(0, centerChunk - surroundingChunks)
+  const endChunk = Math.min(totalChunks - 1, centerChunk + surroundingChunks)
+
+  for (let i = startChunk; i <= endChunk; i++) {
+    try {
+      const result = generatePaginatedCandlestickData(
+        fullBacktestRange,
+        i,
+        paginationConfig,
+        dataOptions
+      )
+      results.push(result)
+    } catch (error) {
+      console.warn(`Failed to generate chunk ${i}:`, error)
+    }
+  }
+
+  return results
+}
+
+/**
+ * Helper to convert backtest date strings to DateRange
+ * @param startDateString - ISO date string from backtest
+ * @param endDateString - ISO date string from backtest
+ * @returns DateRange object
+ */
+export function backtestDatesToRange(startDateString: string, endDateString: string): DateRange {
+  return {
+    start: new Date(startDateString),
+    end: new Date(endDateString)
+  }
+}
+
+/**
+ * Wrapper function for generateSampleCandlestickData that accepts Time instances
+ * This is specifically designed for use with ChartDataBuffer
+ * @param startTime - Start time as Unix timestamp (Time type from lightweight-charts)
+ * @param endTime - End time as Unix timestamp (Time type from lightweight-charts)
+ * @param options - Configuration options for data generation
+ * @returns Array of candlestick data points
+ */
+export function generateSampleCandlestickDataFromTimes(
+  startTime: Time,
+  endTime: Time,
+  options: SampleDataOptions = {}
+): CandlestickData[] {
+  // Convert Time instances (Unix timestamps) to Date objects
+  const startDate = new Date((startTime as number) * 1000)
+  const endDate = new Date((endTime as number) * 1000)
+
+  // Create DateRange object and call the original function
+  const dateRange: DateRange = { start: startDate, end: endDate }
+  return generateSampleCandlestickData(dateRange, options)
+}
+
+/**
+ * Calculate optimal chunk size based on backtest duration
+ * @param backtestRange - The full backtest date range
+ * @param targetChunks - Desired number of chunks (default: 20)
+ * @returns Optimal chunk size in hours
+ */
+export function calculateOptimalChunkSize(
+  backtestRange: DateRange,
+  targetChunks: number = 20
+): number {
+  const totalHours = (backtestRange.end.getTime() - backtestRange.start.getTime()) / (1000 * 60 * 60)
+  const chunkSizeHours = Math.max(1, Math.ceil(totalHours / targetChunks))
+
+  // Round to common intervals (1h, 6h, 12h, 1d, 3d, 1w, etc.)
+  if (chunkSizeHours <= 1) return 1
+  if (chunkSizeHours <= 6) return 6
+  if (chunkSizeHours <= 12) return 12
+  if (chunkSizeHours <= 24) return 24
+  if (chunkSizeHours <= 24 * 3) return 24 * 3
+  if (chunkSizeHours <= 24 * 7) return 24 * 7
+  return Math.ceil(chunkSizeHours / (24 * 7)) * (24 * 7) // Round to weeks
+}
+
+/**
+ * Calculate optimal initial view range for chart based on backtest duration
+ * Uses a small percentage of the total backtest time or maximum 1 week
+ * @param backtestRange - The full backtest date range
+ * @param maxPercentage - Maximum percentage of total range to show (default: 5%)
+ * @param maxDays - Maximum days to show regardless of percentage (default: 7)
+ * @returns Optimal initial view range
+ */
+export function calculateOptimalInitialViewRange(
+  backtestRange: DateRange,
+  maxPercentage: number = 0.05, // 5% of total range
+  maxDays: number = 7 // Max 1 week
+): DateRange {
+  const totalDurationMs = backtestRange.end.getTime() - backtestRange.start.getTime()
+  const maxDurationMs = maxDays * 24 * 60 * 60 * 1000 // Convert days to milliseconds
+  
+  // Calculate the duration based on percentage, but cap it at maxDurationMs
+  const percentageDurationMs = totalDurationMs * maxPercentage
+  const actualDurationMs = Math.min(percentageDurationMs, maxDurationMs)
+  
+  // Start from the beginning of the backtest
+  const startTime = backtestRange.start.getTime()
+  const endTime = Math.min(startTime + actualDurationMs, backtestRange.end.getTime())
+  
+  return {
+    start: new Date(startTime),
+    end: new Date(endTime)
+  }
 }
