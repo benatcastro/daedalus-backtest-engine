@@ -5,19 +5,20 @@ This module provides a minimal implementation of DataHandler for Lean engine
 backtests, focusing on extracting symbol information and providing basic
 candlestick data access capabilities.
 """
-import logging
-import zipfile
 import csv
 import io
-from typing import List, Optional, Set, Dict
+import logging
+import time
+import zipfile
+from config import settings
+from logger import logger
 from datetime import datetime
 from models import Backtest
+from backtest_handler.Candle import Candle
+from typing import List, Optional, Set, Dict
 from backtest_handler.DataHandler import DataHandler
-from backtest_handler.data.models import Candle
 from schemas.LeanBacktest import LeanBacktest, DataRequest
-from config import settings
 from backtest_handler.lean.Exceptions import UnexpectedZipContentError
-from logger import logger
 
 class LeanDataHandler(DataHandler):
     """
@@ -55,6 +56,9 @@ class LeanDataHandler(DataHandler):
             ValueError: If symbol not available or invalid time range
         """
 
+        start_time_processing = time.time()
+        logger.debug(f"Starting to retrieve candles for {symbol} ({resolution}) from {start_time} to {end_time}")
+
         # TODO Manage Quote/Trade files better
         # filter the data request for the correspondendt symbol
         data_requests = list(
@@ -65,7 +69,7 @@ class LeanDataHandler(DataHandler):
 
         for data_request in data_requests:
             zip_path = settings.LEAN_BASE_DATA_PATH.joinpath(data_request.path)
-            logger.info(f"Proccesing file: {zip_path}")
+            logger.debug(f"Proccesing file: {zip_path}")
 
             if not zip_path.exists():
                 raise FileNotFoundError(f"ZIP file not found: {zip_path}")
@@ -73,7 +77,6 @@ class LeanDataHandler(DataHandler):
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                     # Get list of all files in the ZIP
                     file_list = zip_ref.namelist()
-                    logger.info(f"Found {len(file_list)} files in {zip_path}: {file_list}")
 
                     if len(file_list) != 1:
                         raise UnexpectedZipContentError()
@@ -107,6 +110,8 @@ class LeanDataHandler(DataHandler):
                 logger.error(f"Unable to decode file content as UTF-8: {e}")
                 raise
 
+        processing_time = time.time() - start_time_processing
+        logger.info(f"Obtained {len(result)} candles for {symbol} in {processing_time:.2f} seconds")
         return result
 
     async def get_available_symbols(self) -> Dict[str, List[str]]:
