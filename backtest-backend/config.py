@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "./uploads"  # Default value, can be overridden in .env
     CORS_ORIGINS: str
 
+    # Specific settings for Lean engine
+    LEAN_BASE_DATA_PATH: Path = "/home/bena/Workspace/Synced/algotrading/lean/data"
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Return CORS_ORIGINS as a list, regardless of .env format."""
@@ -59,6 +62,8 @@ class Settings(BaseSettings):
         if isinstance(origins, list):
             self.CORS_ORIGINS = origins
         self.CORS_ORIGINS
+
+
 
 # Create a global settings instance
 settings = Settings()
