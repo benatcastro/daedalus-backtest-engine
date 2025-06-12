@@ -4,13 +4,16 @@ from datetime import datetime
 from database import get_db
 from sqlalchemy.orm import Session
 from schemas.backtest import BacktestCreate, StrategyEngine, BacktestRead
+from schemas.LeanBacktest import LeanBacktest
 from models import Backtest
 from typing import List, Optional
 import csv
 import json
 from backtest_handler.BacktestEngine import BacktestEngine
 from backtest_handler.BacktestSaver import BacktestSaver
+from backtest_handler.DataHandler import DataHandler
 from backtest_handler.BactestSaverFactory import BacktestSaverFactory
+from backtest_handler.DataHandlerFactory import DataHandlerFactory
 
 router = APIRouter(prefix="/backtest")
 
@@ -18,11 +21,50 @@ router = APIRouter(prefix="/backtest")
 # CRUD for backtests -> fast api
 
 # TODO
-# Retrieve backtest info
-# Retrieve the historical data used for a backtest (candles)
-@router.get("/{backtest_id}/")
-async def get_candles_for_backtes(symbol: str, start: int, end: int):
-    pass
+@router.get("/{backtest_id}/symbols/")
+async def get_symbols(
+    backtest_id: int,
+    db: Session = Depends(get_db)
+):
+    #Retrieve the backtest by the provided ID.
+    backtest = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+
+    # Check that the backtest exists
+    if not backtest:
+        raise HTTPException(status_code=404, detail=f"Backtest with ID {backtest_id} not found")
+
+    # Create a data handler to retrieve the candles
+    dataHandler = DataHandlerFactory.create_handler(backtest)
+
+    # Obtain and return the symbols
+    symbols = await dataHandler.get_available_symbols()
+    return symbols
+
+@router.get("/{backtest_id}/candles/")
+async def get_candles(
+    backtest_id: int,
+    symbol: str,
+    start: int,
+    end: int,
+    db: Session = Depends(get_db)
+):
+    #Retrieve the backtest by the provided ID.
+    backtest = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+
+    # Check that the backtest exists
+    if not backtest:
+        raise HTTPException(status_code=404, detail=f"Backtest with ID {backtest_id} not found")
+
+    # Create a data handler to retrieve the candles
+    dataHandler = DataHandlerFactory.create_handler(backtest)
+
+    return await dataHandler.get_candles(
+        symbol,
+        datetime.fromtimestamp(start),
+        datetime.fromtimestamp(end))
+
+
+
 
 # Upload a new backtest for a strategy
 @router.post("/", response_model=BacktestRead)
@@ -54,13 +96,6 @@ async def upload_backtest(
         strategy_id=strategy_id,
         files=files)
 
-    print("\n--- SAVER INPUTS ---")
-    print(f"name: {name} ({type(name)})")
-    print(f"description: {description} ({type(description)})")
-    print(f"strategy_id: {strategy_id} ({type(strategy_id)})")
-    print(f"parameters: {saver.parameters} ({type(saver.parameters)})")
-    print("--- END SAVER INPUTS ---\n")
-
     await saver.process()
 
     # Step 1: Validate data using Pydantic schema
@@ -77,7 +112,6 @@ async def upload_backtest(
 
     # Step 2: Create SQLAlchemy model instance from validated data
     new_backtest = Backtest(**backtest_data.model_dump())
-    print(f"New Backtest ORM: {new_backtest}")
 
     # Add to the session
     db.add(new_backtest)
