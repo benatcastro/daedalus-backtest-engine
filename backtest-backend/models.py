@@ -5,6 +5,7 @@ from sqlalchemy import Column, Integer, Enum, JSON, String, Text, DateTime
 from database import Base
 import enum
 from datetime import datetime, timezone
+from backtest_handler.BacktestEngine import BacktestEngine
 
 
 class Backtest(Base):
@@ -16,5 +17,5 @@ class Backtest(Base):
     description = Column(Text)
     starting_date = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     ending_date = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    engine = Column(Enum("LEAN", "BACKTESTING", name="backtest_status"))
+    engine = Column(Enum(BacktestEngine))
     parameters  = Column(JSON)
