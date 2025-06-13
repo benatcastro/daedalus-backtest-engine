@@ -15,8 +15,10 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
     private readonly _data: bufferData<T>;
     private readonly _dataBounds: IRange<Time>;
     private _onDataUpdateCallback: ((data: T[]) => void) | null = null
+    private _onInitialDataLoadedCallback: (() => void) | null = null
     private _isLoading: boolean = false
     private _updateTimeout: NodeJS.Timeout | null = null
+    private _initialDataLoaded: boolean = false
     private readonly CHUNK_SIZE = 30000
 
     constructor(
@@ -52,11 +54,19 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
 
 
     private setData(newData: T[]) {
-
         this._data.data = newData
         this._data.range.from = this._data.data[0].time
         this._data.range.to = this._data.data[this._data.data.length - 1].time
         this.onDataUpdate()
+        
+        // Trigger initial data loaded callback if this is the first data load
+        if (!this._initialDataLoaded && newData.length > 0) {
+            this._initialDataLoaded = true
+            if (this._onInitialDataLoadedCallback) {
+                this._onInitialDataLoadedCallback()
+            }
+        }
+        
         console.log(`Data has been updated Lenght: ${this._data.data.length} Range: ${this.data.range.from} -> ${this.data.range.to}`)
     }
 
@@ -152,6 +162,19 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
     }
 
     /**
+     * Subscribe to be notified when initial data is loaded
+     */
+    public subscribeToInitialDataLoaded(callback: () => void) {
+        if (this._onInitialDataLoadedCallback == null) {
+            console.log("Subscribed to initial data loaded events")
+            this._onInitialDataLoadedCallback = callback
+        }
+        else {
+            console.warn("Initial data loaded callback was already set up")
+        }
+    }
+
+    /**
      * Function used to
      * @param newRange
      */
@@ -180,6 +203,10 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
 
     public get data() {
         return this._data
+    }
+
+    public get isInitialDataLoaded() {
+        return this._initialDataLoaded
     }
 
 }
