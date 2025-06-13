@@ -92,13 +92,10 @@ export default function BacktestChart({
       chartRef.current = null;
       seriesRef.current = null;
     };
-  },[backtest])  // Add dependency to re-run when buffer changes
-
-  // Effect to set initial data when buffer is ready
+  },[backtest])  // Add dependency to re-run when buffer changes  // Effect to set initial data when buffer is ready
   useEffect(() => {
     if (!candleStickDataBuffer || !chartRef.current) return
     const initialize = async () => {
-
       console.log("Setting initial data from buffer:", candleStickDataBuffer)
       await candleStickDataBuffer.initialize(
         {
@@ -107,19 +104,21 @@ export default function BacktestChart({
         })
     }
     initialize()
-    //chartRef.current.timeScale().fitContent()
   }, [candleStickDataBuffer, chartRef.current])
   useEffect(() => {
-    console.log("Reset view effect")
-    if (!candleStickDataBuffer.data.data.length || !chartRef.current) return
-        console.log("RESETING VIEW")
-        chartRef.current.timeScale().setVisibleRange(
-          {
-            from: (optimalInitialRange.start.getTime() / 1000) as Time,
-            to: (optimalInitialRange.end.getTime() / 1000) as Time
-          }
-      )
-  }, [candleStickDataBuffer.data.data.length, chartRef.current])
+    if (!candleStickDataBuffer || !chartRef.current) return
+
+    // Subscribe to initial data loaded event to reset the view once
+    candleStickDataBuffer.subscribeToInitialDataLoaded(() => {
+      if (chartRef.current) {
+        console.log("Initial data loaded - resetting view to optimal range")
+        chartRef.current.timeScale().setVisibleRange({
+          from: (optimalInitialRange.start.getTime() / 1000) as Time,
+          to: (optimalInitialRange.end.getTime() / 1000) as Time
+        })
+      }
+    })
+  }, [candleStickDataBuffer, chartRef.current, optimalInitialRange])
 
   // Effect to set up time range change subscription
   useEffect(() => {
@@ -180,8 +179,8 @@ export default function BacktestChart({
 
       const prevRange = chartRef.current.timeScale().getVisibleRange()
       seriesRef.current.setData(data)
-      //if (prevRange)
-        //chartRef.current.timeScale().setVisibleRange(prevRange)
+      if (prevRange)
+        chartRef.current.timeScale().setVisibleRange(prevRange)
 
     })
 
