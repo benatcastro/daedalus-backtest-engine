@@ -18,8 +18,16 @@ from backtest_handler.Candle import Candle
 from typing import List, Optional, Set, Dict
 from backtest_handler.DataHandler import DataHandler
 from schemas.LeanBacktest import LeanBacktest, DataRequest
-from backtest_handler.lean.Exceptions import UnexpectedZipContentError
+from backtest_handler.lean.LeanExceptions import UnexpectedZipContentError
+from backtest_handler.Exceptions import (
+    BacktestDataException,
+    CandlestickDataNotAvailableException,
+    SymbolNotAvailableException,
+    ResolutionNotAvailableException,
+    TimeRangeNotAvailableException
+)
 
+# TODO Normalize the exceptions in abstract class
 class LeanDataHandler(DataHandler):
     """
     DataHandler implementation for Lean engine backtests.
@@ -47,29 +55,63 @@ class LeanDataHandler(DataHandler):
             symbol: Trading symbol (e.g., "ETHUSDT")
             start_time: Start of the time range
             end_time: End of the time range
-            resolution: Time resolution (e.g., "1m", "1h", "1d")
+            resolution: Time resolution (e.g., "minute", "hour", "day")
 
         Returns:
             List of Candle objects
 
         Raises:
-            ValueError: If symbol not available or invalid time range
+            SymbolNotAvailableException: If symbol not available in backtest
+            ResolutionNotAvailableException: If resolution not available for symbol
+            DataRangeNotAvailableException: If requested time range is outside data coverage
+            NoDataAvailableException: If no data available at all
         """
 
         start_time_processing = time.time()
         logger.debug(f"Starting to retrieve candles for {symbol} ({resolution}) from {start_time} to {end_time}")
 
+        # Get available symbols to validate the request
+        available_symbols = await self.get_available_symbols()
+
+        # Validate symbol availability
+        symbol_upper = symbol.upper()
+        if symbol_upper not in available_symbols:
+            logger.warning(f"Symbol '{symbol}' not found in backtest data")
+            raise SymbolNotAvailableException(
+                symbol=symbol,
+                available_symbols=list(available_symbols.keys())
+            )
+
+        # Validate resolution availability for this symbol
+        available_resolutions = available_symbols[symbol_upper]
+        resolution_lower = resolution.lower()
+        if resolution_lower not in available_resolutions:
+            logger.warning(f"Resolution '{resolution}' not available for symbol '{symbol}'")
+            raise ResolutionNotAvailableException(
+                symbol=symbol,
+                resolution=resolution,
+                available_resolutions=available_resolutions
+            )
+
         # TODO Manage Quote/Trade files better
         # filter the data request for the correspondendt symbol
         data_requests = list(
-            filter(lambda dr: dr.symbol == symbol and dr.resolution == resolution and dr.data_type == "trade",
+            filter(lambda dr: dr.symbol.lower() == symbol.lower() and dr.resolution.lower() == resolution.lower() and dr.data_type == "trade",
                    self._backtest.succeeded_data_requests))
+
+        if not data_requests:
+            logger.warning(f"No data requests found for {symbol} with resolution {resolution}")
+            raise CandlestickDataNotAvailableException(
+                symbol=symbol,
+                resolution=resolution,
+                message=f"No trade data available for {symbol} at {resolution} resolution"
+            )
 
         result: List[Candle] = []
 
         for data_request in data_requests:
             zip_path = settings.LEAN_BASE_DATA_PATH.joinpath(data_request.path)
-            logger.debug(f"Proccesing file: {zip_path}")
+            #logger.debug(f"Proccesing file: {zip_path}")
 
             if not zip_path.exists():
                 raise FileNotFoundError(f"ZIP file not found: {zip_path}")
@@ -100,8 +142,17 @@ class LeanDataHandler(DataHandler):
                             candle_date = data_request.date.replace(hour=hour, minute=minute)
 
                             # Append the new candle to the result if his datetime is within range
+                            # TODO investigate how to handle last candle of the day 00:00
                             if start_time <= candle_date <= end_time:
-                                result.append(Candle(candle_date,open, high, low, close, float(volume)))
+                                result.append(
+                                    Candle(
+                                        timestamp=candle_date,
+                                        open=open,
+                                        high=float(high),
+                                        low=float(low),
+                                        close=float(close),
+                                        volume=float(volume)
+                                    ))
 
             except zipfile.BadZipFile as e:
                 logger.error(f"Invalid ZIP file {zip_path}: {e}")
@@ -111,6 +162,27 @@ class LeanDataHandler(DataHandler):
                 raise
 
         processing_time = time.time() - start_time_processing
+
+        # Validate that we have data for the requested time range
+        if not result:
+            # Get the available date range for this symbol to provide helpful feedback
+            date_range = await self.get_date_range_for_symbol(symbol)
+            available_date_range = None
+            if date_range:
+                available_date_range = {
+                    "start": date_range[0],
+                    "end": date_range[1]
+                }
+
+            logger.warning(f"No candlestick data found for {symbol} in time range {start_time} to {end_time}")
+            raise TimeRangeNotAvailableException(
+                symbol=symbol,
+                resolution=resolution,
+                start_time=start_time,
+                end_time=end_time,
+                available_date_range=available_date_range
+            )
+
         logger.info(f"Obtained {len(result)} candles for {symbol} in {processing_time:.2f} seconds")
         return result
 

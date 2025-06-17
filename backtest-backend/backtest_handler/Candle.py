@@ -2,14 +2,13 @@
 Core domain models for candlestick data handling.
 These are immutable value objects representing the fundamental data types.
 """
-from dataclasses import dataclass
 from datetime import datetime
+from pydantic import BaseModel, Field, field_validator
 
 
-@dataclass(frozen=True)
-class Candle:
+class Candle(BaseModel):
     """
-    Immutable value object representing a single candlestick.
+    Pydantic validation schema representing a single candlestick.
 
     Attributes:
         timestamp: Unix timestamp or datetime of the candle
@@ -19,39 +18,31 @@ class Candle:
         close: Closing price
         volume: Trading volume during the period
     """
-    timestamp: datetime
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float = 0.0
+    timestamp: datetime = Field(..., description="Unix timestamp or datetime of the candle")
+    open: float = Field(..., description="Opening price")
+    high: float = Field(..., description="Highest price during the period")
+    low: float = Field(..., description="Lowest price during the period")
+    close: float = Field(..., description="Closing price")
+    volume: float = Field(0.0, description="Trading volume during the period")
 
-    def __post_init__(self):
-        """Validate OHLC constraints after initialization."""
-        if not self._validate_ohlc():
-            raise ValueError(
-                f"Invalid OHLC data: high ({self.high}) must be >= max(open, close), "
-                f"low ({self.low}) must be <= min(open, close)"
-            )
+    """
+    @field_validator("high")
+    def validate_high(cls, high, values):
+        max_price = max(cls.open, cls.close)
+        if high < max_price:
+            raise ValueError(f"High ({high}) must be >= max(open, close)")
+        return high
 
-        if self.volume < 0:
-            raise ValueError(f"Volume cannot be negative: {self.volume}")
+    @field_validator("low")
+    def validate_low(cls, low, values):
+        min_price = min(cls.open, cls.close)
+        if low > min_price:
+            raise ValueError(f"Low ({low}) must be <= min(open, close)")
+        return low
 
-    def _validate_ohlc(self) -> bool:
-        """Validate that OHLC values follow proper constraints."""
-        max_price = max(self.open, self.close)
-        min_price = min(self.open, self.close)
-
-        return (
-            self.high >= max_price and
-            self.low <= min_price and
-            self.high >= self.low
-        )
-
-    @property
-    def datetime(self) -> datetime:
-        """Get datetime representation of timestamp."""
-        if isinstance(self.timestamp, datetime):
-            return self.timestamp
-        return datetime.fromtimestamp(self.timestamp)
-
+    @field_validator("volume")
+    def validate_volume(cls, volume):
+        if volume < 0:
+            raise ValueError(f"Volume cannot be negative: {volume}")
+        return volume
+    """

@@ -28,6 +28,7 @@ export default function BacktestChart({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const rangeRestorationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const dateRange = backtestDatesToRange(backtest.starting_date, backtest.ending_date)
 
@@ -80,6 +81,28 @@ export default function BacktestChart({
     const chart = createChart(chartContainerRef.current, {
         width: chartContainerRef.current.clientWidth,
         height: chartContainerRef.current.clientHeight,
+        timeScale: {
+          rightOffset: 12,
+          barSpacing: 3,
+          fixLeftEdge: false,
+          lockVisibleTimeRangeOnResize: true,
+          rightBarStaysOnScroll: true,
+          borderVisible: false,
+          visible: true,
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        grid: {
+          vertLines: {
+            color: "rgba(197, 203, 206, 0.5)",
+          },
+          horzLines: {
+            color: "rgba(197, 203, 206, 0.5)",
+          },
+        },
+        crosshair: {
+          mode: 1,
+        },
     });
 
     const newSeries = chart.addSeries(CandlestickSeries);
@@ -112,10 +135,16 @@ export default function BacktestChart({
     candleStickDataBuffer.subscribeToInitialDataLoaded(() => {
       if (chartRef.current) {
         console.log("Initial data loaded - resetting view to optimal range")
-        chartRef.current.timeScale().setVisibleRange({
-          from: (optimalInitialRange.start.getTime() / 1000) as Time,
-          to: (optimalInitialRange.end.getTime() / 1000) as Time
-        })
+
+        // Use a small delay to ensure data is fully rendered
+        setTimeout(() => {
+          if (chartRef.current) {
+            chartRef.current.timeScale().setVisibleRange({
+              from: (optimalInitialRange.start.getTime() / 1000) as Time,
+              to: (optimalInitialRange.end.getTime() / 1000) as Time
+            })
+          }
+        }, 50)
       }
     })
   }, [candleStickDataBuffer, chartRef.current, optimalInitialRange])
@@ -135,53 +164,44 @@ export default function BacktestChart({
 
 
 
+    let lastNotLoadingViewRange: IRange<Time>;
+
     const timeRangeChangeHandler = async (timeRange: IRange<Time> | null) => {
       if (!timeRange) return
 
       // Obtain the real change in the chart
-      const previousTimeRange = candleStickDataBuffer.currentViewRange
-
-
-      // There has been a movement but the chart was already at the maximun load from the right
-      const timeDiffObtainer = (prev: IRange<Time>, current: IRange<Time>) => {
-
-        if (current.from === prev.from) {
-            return ((current.to as number) - (prev.to as number))
-        }
-        else {
-            return ((current.from as number) - (prev.from as number))
-        }
+      if (!candleStickDataBuffer.isLoading) {
+        lastNotLoadingViewRange = timeRange
       }
 
-      const timeDiff = timeDiffObtainer(previousTimeRange, timeRange)
-      if (timeDiff === 0)
-        return
+      if (candleStickDataBuffer.isLoading && lastNotLoadingViewRange) {
+        chartRef.current?.timeScale().setVisibleRange(lastNotLoadingViewRange)
 
-      candleStickDataBuffer.updateDataRange(timeRange)
-
-      /*
-
-      */
-      //console.log(`${timeDiff > 0 ? "forward" : "backward"}: ${timeDiff}`)
-      /*
-      const shiftedRange = {
-        from: (previousTimeRange.from as number + timeDiff) as Time,
-        to: (previousTimeRange.to as number + timeDiff) as Time
       }
-      //console.log(`Shifted Range ${shiftedRange.from} -> ${shiftedRange.to} Real Range ${timeRange.from} -> ${timeRange.to}`)
 
-      const finalRange = previousTimeRange.to as number === timeRange.to ? previousTimeRange : timeRange
-      */
+      if (!candleStickDataBuffer.isLoading)
+        candleStickDataBuffer.updateDataRange(timeRange)
     }
 
+    // Subscribe to full data updates (for initial load)
     candleStickDataBuffer.subscribeToDataUpdates((data: CandlestickData[]) => {
       if (!seriesRef.current || !chartRef.current) return
 
-      const prevRange = chartRef.current.timeScale().getVisibleRange()
+      console.log("Full data update - replacing all chart data")
       seriesRef.current.setData(data)
-      if (prevRange)
-        chartRef.current.timeScale().setVisibleRange(prevRange)
+    })
 
+    // Subscribe to incremental data appends (for smooth loading of new chunks)
+    candleStickDataBuffer.subscribeToDataAppends((newData: CandlestickData[]) => {
+      if (!seriesRef.current || !chartRef.current || newData.length === 0) return
+
+      console.log(`Appending ${newData.length} new candles to chart using update()`)
+
+      // Use update() method to append each new data point individually
+      // This maintains chart continuity and prevents view jumping
+      newData.forEach(candle => {
+        seriesRef.current?.update(candle)
+      })
     })
 
     console.log("Subscribing to visible time range changes");

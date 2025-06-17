@@ -38,12 +38,17 @@ class LeanBacktestSaver(BacktestSaver):
     async def _process_data_requests(self, file: UploadFile, ):
         file_content = await file.read()
         data_requests = file_content.decode().splitlines()
+        unique_requests = set()
         result = []
 
         for dr in data_requests:
             new_dr = DataRequest.from_path(dr.strip())
             if new_dr:
-                result.append(new_dr)
+                dr_dict = new_dr.to_dict()
+                dr_tuple = tuple(dr_dict.items())  # Convert dictionary to tuple for hashing
+                if dr_tuple not in unique_requests:
+                    unique_requests.add(dr_tuple)
+                    result.append(new_dr)
 
         return result
 

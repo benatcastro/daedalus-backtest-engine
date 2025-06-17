@@ -259,6 +259,18 @@ class DataRequest(BaseModel):
             path=Path(*parts)
         )
 
+    def to_dict(self) -> dict:
+        """Convert DataRequest attributes to a dictionary."""
+        return {
+            "security_type": self.security_type,
+            "market": self.market,
+            "resolution": self.resolution,
+            "symbol": self.symbol,
+            "date": self.date.isoformat(),
+            "data_type": self.data_type,
+            "path": str(self.path)
+        }
+
     class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat(),
