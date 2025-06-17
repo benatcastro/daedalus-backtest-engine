@@ -8,12 +8,15 @@ import {
   ISeriesApi,
   Time,
   IRange,
+  TimeScaleOptions,
 } from 'lightweight-charts'
 import { ChartDataBuffer, DataBounds } from '@/lib/chart-data-buffer'
 import { SeriesDataBuffer } from '@/lib/chart-data-buffer-v2'
 import Backtest from '@/app/types/backtest'
 import { backtestDatesToRange, calculateOptimalInitialViewRange } from '@/utils/sample-data-generator'
-
+import {
+  useChartTheme,
+} from '@/hooks/chart-theme';
 
 interface BacktestChartProps {
   backtest: Backtest,
@@ -28,8 +31,9 @@ export default function BacktestChart({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const rangeRestorationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const chartOptions = useChartTheme()
 
+  console.warn("Chart options: ", chartOptions)
   const dateRange = backtestDatesToRange(backtest.starting_date, backtest.ending_date)
 
   // Calculate optimal initial view range (5% of total duration or max 1 week)
@@ -78,31 +82,12 @@ export default function BacktestChart({
       return
     }
 
+    console.log("Chart options creating chart: ", chartOptions)
     const chart = createChart(chartContainerRef.current, {
+        ...chartOptions,
         width: chartContainerRef.current.clientWidth,
         height: chartContainerRef.current.clientHeight,
-        timeScale: {
-          rightOffset: 12,
-          barSpacing: 3,
-          fixLeftEdge: false,
-          lockVisibleTimeRangeOnResize: true,
-          rightBarStaysOnScroll: true,
-          borderVisible: false,
-          visible: true,
-          timeVisible: true,
-          secondsVisible: false,
-        },
-        grid: {
-          vertLines: {
-            color: "rgba(197, 203, 206, 0.5)",
-          },
-          horzLines: {
-            color: "rgba(197, 203, 206, 0.5)",
-          },
-        },
-        crosshair: {
-          mode: 1,
-        },
+
     });
 
     const newSeries = chart.addSeries(CandlestickSeries);
@@ -115,7 +100,9 @@ export default function BacktestChart({
       chartRef.current = null;
       seriesRef.current = null;
     };
-  },[backtest])  // Add dependency to re-run when buffer changes  // Effect to set initial data when buffer is ready
+  },[backtest, chartOptions])  // Add dependency to re-run when buffer changes
+
+  // Effect to set initial data when buffer is ready
   useEffect(() => {
     if (!candleStickDataBuffer || !chartRef.current) return
     const initialize = async () => {
