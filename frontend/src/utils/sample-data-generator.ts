@@ -419,19 +419,19 @@ export function calculateOptimalChunkSize(
 export function calculateOptimalInitialViewRange(
   backtestRange: DateRange,
   maxPercentage: number = 0.05, // 5% of total range
-  maxDays: number = 7 // Max 1 week
+  maxDays: number = 0.1 // Max 1 week
 ): DateRange {
   const totalDurationMs = backtestRange.end.getTime() - backtestRange.start.getTime()
   const maxDurationMs = maxDays * 24 * 60 * 60 * 1000 // Convert days to milliseconds
-  
+
   // Calculate the duration based on percentage, but cap it at maxDurationMs
   const percentageDurationMs = totalDurationMs * maxPercentage
   const actualDurationMs = Math.min(percentageDurationMs, maxDurationMs)
-  
+
   // Start from the beginning of the backtest
   const startTime = backtestRange.start.getTime()
   const endTime = Math.min(startTime + actualDurationMs, backtestRange.end.getTime())
-  
+
   return {
     start: new Date(startTime),
     end: new Date(endTime)
