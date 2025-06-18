@@ -66,9 +66,6 @@ export class DataFeed<T extends TimeBasedData> {
         this._data.range.from = this._data.data[0].time
         this._data.range.to = this._data.data[this._data.data.length - 1].time
         this.onDataUpdate()
-
-
-
         console.log(`Data has been updated Length: ${this._data.data.length} Range: ${this.data.range.from} -> ${this.data.range.to}`)
     }
 
@@ -133,7 +130,6 @@ export class DataFeed<T extends TimeBasedData> {
 
         console.log(`Fetched ${fetchedData.length} data entries for view range ${dataRange.from} -> ${dataRange.to}`)
         this.setData(fetchedData)
-
     }
 
     /**
@@ -145,7 +141,6 @@ export class DataFeed<T extends TimeBasedData> {
 
         try {
             let margin = 15000
-            const chunkSize = 30000
             console.log("Start Data Length: ", this._data.data.length)
 
             if (this._data.data.length === 0) {

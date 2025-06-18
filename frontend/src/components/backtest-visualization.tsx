@@ -12,6 +12,9 @@ import { IRange } from "lightweight-charts"
 import { ChartDataBuffer } from "@/lib/chart-data-buffer"
 import { CandlestickData } from "lightweight-charts"
 import { DateRange } from "@/utils/sample-data-generator"
+import Chart from "./chart/chart"
+import { Series } from "./chart/series"
+import { useDataFeed } from "@/hooks/use-data-feed"
 
 interface BacktestVisualizationProps {
   strategy: Strategy
@@ -28,6 +31,8 @@ export function BacktestVisualization({ strategy, backtest  }: BacktestVisualiza
       dateRange: dateRange,
     }
   }, [strategy.id, backtest.id])
+  const [candlesticDataFeed, isCandleStickDataFeedLoading] = useDataFeed(backtest)
+
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -70,10 +75,16 @@ export function BacktestVisualization({ strategy, backtest  }: BacktestVisualiza
         <div className="flex-1 flex flex-col min-h-0">
           {/* Chart Navigation */}
           <div className="flex-1 bg-background p-4 min-h-0">
-            <BacktestChart
-              backtest={backtest}
-              className="w-full h-full border rounded"
-            />
+              <Chart >
+                {candlesticDataFeed ?
+                  <Series
+                    type="candlestick"
+                    dataFeed={candlesticDataFeed}
+                  />
+                :
+                  <h1>Candlestick DataFeed is loading</h1>
+                }
+              </Chart>
           </div>
         </div>
 
