@@ -1,18 +1,19 @@
 import React, { forwardRef, useLayoutEffect, useImperativeHandle, useRef, useContext } from 'react';
 import {
   ISeriesApi,
-  CandlestickSeries as LWCCandlestickSeries,
-  LineSeries as LWCLineSeries,
-  AreaSeries as LWCAreaSeries,
   CandlestickData,
   LineData,
   AreaData,
   DeepPartial,
   CandlestickSeriesPartialOptions,
   LineSeriesPartialOptions,
-  AreaSeriesPartialOptions
+  AreaSeriesPartialOptions,
+  CandlestickSeries,
+  LineSeries,
+  AreaSeries,
 } from 'lightweight-charts';
 import { ChartContext } from './chart';
+import { DataFeed } from '@/lib/data-feed';
 
 // Type definitions for your trading data
 type SeriesType = 'candlestick' | 'line' | 'area';
@@ -32,9 +33,11 @@ interface SeriesProps<T extends SeriesType> {
   data: SeriesData<T>;
   options?: SeriesOptions<T>;
   children?: React.ReactNode;
+  dataFeed?: DataFeed<any>;
 }
 
 const SeriesContext = React.createContext<{
+  _dataFeed?: DataFeed<any>;
   api(): ISeriesApi<any>;
   free(): void;
 } | null>(null);
@@ -47,29 +50,49 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>((props, ref)
  // Each series manages its own API reference
   const context = useRef({
     _api: null as ISeriesApi<any> | null,
+    _dataFeed: null as DataFeed<any> | null,
 
     // Lazy initialization - creates series only when needed
     api() {
+      console.log("Triying to create Serie")
       if (!this._api && parent) {
-        const { children, data, type, options = {}, ...rest } = props;
+        console.log("Creating Serie")
+        const { children, data, type, dataFeed, options = {}, ...rest } = props;
 
         // Create the appropriate series type for your trading visualization
         switch (type) {
           case 'candlestick':
-            this._api = parent.api().addSeries(LWCCandlestickSeries, { ...options, ...rest });
+            this._api = parent.api().addSeries(CandlestickSeries, { ...options, ...rest });
             break;
           case 'line':
-            this._api = parent.api().addSeries(LWCLineSeries, { ...options, ...rest });
+            this._api = parent.api().addSeries(LineSeries, { ...options, ...rest });
             break;
           case 'area':
-            this._api = parent.api().addSeries(LWCAreaSeries, { ...options, ...rest });
+            this._api = parent.api().addSeries(AreaSeries, { ...options, ...rest });
             break;
           default:
             throw new Error(`Unsupported series type: ${type} for Daedalus trading visualization`);
         }
 
         // Load the backtest data into the series
-        this._api.setData(data);
+        if (data) {
+          this._api.setData(data);
+        }
+
+        if (dataFeed) {
+          this._dataFeed = dataFeed
+          console.log("ChartContainer: Before push, array length:", parent._dataFeeds.length);
+          parent.addDataFeed(dataFeed)
+          console.log("ChartContainer: After push, array length:", parent._dataFeeds.length);
+
+          // Subscription to data updates
+          dataFeed.subscribeToDataUpdates((data) => {
+            if (this._api) {
+              this._api.setData(data);
+            }
+          })
+        }
+
 
         console.log(`${type} series created for trading analysis`);
       }
@@ -79,13 +102,20 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>((props, ref)
     // Cleanup function - removes series from chart
     free() {
       if (!parent) {
-        console.warn("Cant free because parent is null")
         return
       }
       // Check if parent chart was removed already (prevents errors)
-      if (this._api && !parent.isRemoved) {
-        // Remove only this specific series from the chart
-        parent.free(this._api);
+      if (this._api) {
+
+        if (this._dataFeed) {
+          parent.removeDataFeed(this._dataFeed)
+        }
+
+        // Check that the chart has not been removed before deleting the series from the chart
+        if (!parent.isRemoved) {
+          parent.free(this._api);
+
+        }
         this._api = null;
         console.log(`${props.type} series removed from trading chart`);
       }
@@ -98,7 +128,9 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>((props, ref)
     currentRef.api(); // Create the series
 
     // Cleanup when component unmounts
-    return () => currentRef.free();
+    return () => {
+      currentRef.free()
+    }
   }, []); // Empty dependency - runs once on mount
 
 
@@ -112,7 +144,9 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>((props, ref)
       currentRef._api.applyOptions({ ...options, ...rest });
 
       // Update data if it changed (for real-time backtest updates)
-      currentRef._api.setData(data);
+      if (data) {
+        currentRef._api.setData(data);
+      }
     }
   }, [props]); // Runs when any prop changes
 
