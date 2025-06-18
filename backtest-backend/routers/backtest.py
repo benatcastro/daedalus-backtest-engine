@@ -131,6 +131,13 @@ async def upload_backtest(
     db.refresh(new_backtest)
     return new_backtest
 
+# Retrieve all backtests of a strategy
+@router.get("/backtest/{backtest_id}", response_model=BacktestRead)
+async def get_backtests_by_strategy(backtest_id: int, db: Session = Depends(get_db)):
+    backtests = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+    return backtests
+
+
 
 # Retrieve all backtests of a strategy
 @router.get("/{strategy_id}", response_model=List[BacktestRead])

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { DeepPartial, ChartOptions } from 'lightweight-charts';
+import { useTheme } from 'next-themes';
 
 /**
  * Create chart options for a specific theme
@@ -59,50 +60,23 @@ function createChartOptionsForTheme(isDark: boolean): DeepPartial<ChartOptions> 
  * Simple hook to get chart options based on current shadcn theme
  */
 export function useChartTheme(): DeepPartial<ChartOptions> {
-  // Initialize with a default theme to avoid null on first render
-  const getInitialOptions = (): DeepPartial<ChartOptions> => {
-    if (typeof window === 'undefined') {
-      // SSR fallback - return light theme
-      return createChartOptionsForTheme(false);
-    }
     // Client-side - check current theme
-    const isDark = document.documentElement.classList.contains('dark');
+    // TODO UPDATE LOGIC SO IT REALL CHECKS THEME
+    //const isDark = useTheme() === 'dark' ? true : false;
+    const theme = useTheme()
+    const isDark = true
+
     return createChartOptionsForTheme(isDark);
-  };
-
-  const [chartOptions, setChartOptions] = useState<DeepPartial<ChartOptions>>(getInitialOptions);
-
-  useEffect(() => {
-    const updateChartOptions = () => {
-      const isDark = document.documentElement.classList.contains('dark');
-      setChartOptions(createChartOptionsForTheme(isDark));
-    };
-
-    // Set initial options
-    updateChartOptions();
-
-    // Watch for theme changes
-    const observer = new MutationObserver(() => {
-      updateChartOptions();
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  return chartOptions;
 }
 
 /**
  * Get candlestick series options based on current theme
  */
 export function getCandlestickOptions() {
-  const isDark = document.documentElement.classList.contains('dark');
-  
+    // TODO UPDATE LOGIC SO IT REALL CHECKS THEME
+    //const isDark = useTheme() === 'dark' ? true : false;
+    const isDark = true
+
   return {
     upColor: isDark ? '#22c55e' : '#16a34a',
     downColor: isDark ? '#ef4444' : '#dc2626',
