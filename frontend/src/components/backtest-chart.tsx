@@ -11,12 +11,12 @@ import {
   TimeScaleOptions,
 } from 'lightweight-charts'
 import { ChartDataBuffer, DataBounds } from '@/lib/chart-data-buffer'
-import { SeriesDataBuffer } from '@/lib/chart-data-buffer-v2'
+import { DataFeed } from '@/lib/data-feed'
 import Backtest from '@/app/types/backtest'
 import { backtestDatesToRange, calculateOptimalInitialViewRange } from '@/utils/sample-data-generator'
 import {
   useChartTheme,
-} from '@/hooks/chart-theme';
+} from '@/hooks/use-chart-theme';
 
 interface BacktestChartProps {
   backtest: Backtest,
@@ -42,7 +42,7 @@ export default function BacktestChart({
   const candleStickDataBuffer = useMemo(() => {
     console.log("Use memo for creating the buffer")
 
-    return new SeriesDataBuffer<CandlestickData>(
+    return new DataFeed<CandlestickData>(
       async (range: IRange<Time>) => {
         // Create the query params
         const queryParams = new URLSearchParams({
