@@ -9,7 +9,7 @@ interface bufferData<T extends TimeBasedData> {
     range: IRange<Time>
 }
 
-export class SeriesDataBuffer<T extends TimeBasedData> {
+export class DataFeed<T extends TimeBasedData> {
     private _viewRange!: IRange<Time>;
     private readonly _fetchData: (range: IRange<Time>) => Promise<T[]>;
     private readonly _data: bufferData<T>;
@@ -20,7 +20,6 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
     private _isLoading: boolean = false
     private _updateTimeout: NodeJS.Timeout | null = null
     private _initialDataLoaded: boolean = false
-    private _isSilentUpdate: boolean = false
     private readonly CHUNK_SIZE = 30000
     private readonly INITIAL_CHUNKS = 1
 
@@ -34,7 +33,6 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
             data: [],
             range: {from: 0, to: 0} as IRange<Time>
         }
-
     }
 
     /**
@@ -47,20 +45,19 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
     }
 
     /**
-     * Notify listeners that new data has been appended
-     */
-    public onDataAppend(newData: T[]) {
-        if (this._onDataAppendCallback)
-            this._onDataAppendCallback(newData)
-    }
-
-    /**
      *
      * @param initialRange
      */
     public async initialize(initialRange: IRange<Time>) {
         this._viewRange = initialRange
         await this.updateData()
+        // Trigger initial data loaded callback if this is the first data load
+        if (!this._initialDataLoaded && this.data.data.length > 0) {
+            this._initialDataLoaded = true
+            if (this._onInitialDataLoadedCallback) {
+                this._onInitialDataLoadedCallback()
+            }
+        }
     }
 
 
@@ -70,13 +67,7 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
         this._data.range.to = this._data.data[this._data.data.length - 1].time
         this.onDataUpdate()
 
-        // Trigger initial data loaded callback if this is the first data load
-        if (!this._initialDataLoaded && newData.length > 0) {
-            this._initialDataLoaded = true
-            if (this._onInitialDataLoadedCallback) {
-                this._onInitialDataLoadedCallback()
-            }
-        }
+
 
         console.log(`Data has been updated Length: ${this._data.data.length} Range: ${this.data.range.from} -> ${this.data.range.to}`)
     }
@@ -176,10 +167,10 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
                 console.log("Loading ONE chunk to the right")
                 const newData = await this._fetchData({
                     from: this.data.range.to,
-                    to: Math.min(this.data.range.to as number + chunkSize, this._dataBounds.to as number) as Time
+                    to: Math.min(this.data.range.to as number + this.CHUNK_SIZE, this._dataBounds.to as number) as Time
                 })
 
-                console.log(`Fetched ${newData.length} data entries for ${this.data.range.to} -> ${Math.min(this.data.range.to as number + chunkSize, this._dataBounds.to as number)}`)
+                console.log(`Fetched ${newData.length} data entries for ${this.data.range.to} -> ${Math.min(this.data.range.to as number + this.CHUNK_SIZE, this._dataBounds.to as number)}`)
 
                 if (newData.length === 0) {
                     console.log("No more data available from API")
@@ -211,6 +202,10 @@ export class SeriesDataBuffer<T extends TimeBasedData> {
         }
     }
 
+
+    public unsubscribeToDataUpdates() {
+        this._onDataUpdateCallback = null
+    }
     /**
      * Function executed when the data is updated, place to update the series data
      */
