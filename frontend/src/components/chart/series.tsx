@@ -30,7 +30,7 @@ type SeriesOptions<T extends SeriesType> =
 
 interface SeriesProps<T extends SeriesType> {
   type: T;
-  data: SeriesData<T>;
+  data?: SeriesData<T>;
   options?: SeriesOptions<T>;
   children?: React.ReactNode;
   dataFeed?: DataFeed<any>;

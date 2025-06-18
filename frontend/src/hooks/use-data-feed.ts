@@ -18,9 +18,13 @@ export function useDataFeed<T extends TimeBasedData>(backtest: Backtest | undefi
       }
       return [null, null]
     },
-    [backtest]))
+    [backtest, dataFetcher]))
 
-  const fetcher = dataFetcher ? dataFetcher : useCallback(async (range: IRange<Time>) => {
+  const fetcher = useCallback(async (range: IRange<Time>) => {
+    if (dataFetcher) {
+      return dataFetcher(range)
+
+    }
     if (!backtest) return
         // Create the query params
         const queryParams = new URLSearchParams({

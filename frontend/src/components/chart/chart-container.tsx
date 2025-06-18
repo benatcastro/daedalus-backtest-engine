@@ -92,8 +92,8 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>((props,
         console.log("Merged chart options:", mergedOptions);
         this._api = createChart(container, {
           ...mergedOptions,
-          width: width || container.clientWidth,
-          height: height,
+          width: container.clientWidth,
+          height: container.clientHeight,
         });
         console.log("Chart created with dimensions:", width, height);
         this.isRemoved = false;
@@ -103,9 +103,15 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>((props,
 
     // Cleanup method for series removal (important for memory management with large datasets)
     free(series?: ISeriesApi<any>): void {
-      if (this._api && series) {
-        console.warn("Removing Series: ", series)
-        this._api.removeSeries(series);
+      if (this._api && series && !this.isRemoved) {
+        try {
+          console.warn("Removing Series: ", series);
+          this._api.removeSeries(series);
+        } catch (error) {
+          console.warn("Failed to remove series - it may have already been removed:", error);
+        }
+      } else if (!series) {
+        console.warn("Cannot remove series: series is undefined or null");
       }
     },
 

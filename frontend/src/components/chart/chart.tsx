@@ -33,7 +33,13 @@ export default function Chart(props: ChartProps) {
   const handleRef = useCallback((ref: HTMLElement | null) => setContainer(ref), []);
 
   return (
-      <div ref={handleRef} style={{ width: '100%', height: props.height || 400 }}>
+      <div
+        ref={handleRef}
+        style={{
+          width: props.width || '100%',
+          height: '100%'
+        }}
+      >
           {container && (
             <ChartContainer {...chartOptions} container={container}>
               {children}
