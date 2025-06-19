@@ -6,8 +6,8 @@ on:
     branches: ["*"]
 
 jobs:
-  frontend-style:
-    name: Frontend Code Style
+  frontend-quality:
+    name: Frontend Code Quality
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -22,9 +22,13 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Run Prettier check
+      - name: Format check
         working-directory: ./frontend
         run: npm run style:check .
+
+      - name: Linting check
+        working-directory: ./frontend
+        run: npm run lint
 
   backend-quality:
     name: Backend Code Quality
