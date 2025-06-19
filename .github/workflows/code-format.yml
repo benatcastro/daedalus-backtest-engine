@@ -25,3 +25,27 @@ jobs:
       - name: Run Prettier check
         working-directory: ./frontend
         run: npm run style:check .
+
+  backend-quality:
+    name: Backend Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        working-directory: ./backtest-backend
+        run: pip install -r cicd-requirements.txt
+
+      - name: Format Check
+        working-directory: ./backtest-backend
+        run: ruff format --check
+
+      - name: Linting Check
+        working-directory: ./backtest-backend
+        run: ruff check
+
