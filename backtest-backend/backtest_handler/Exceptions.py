@@ -19,7 +19,9 @@ class BacktestDataException(Exception):
     with structured error information for API responses.
     """
 
-    def __init__(self, message: str, error_code: str, details: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, message: str, error_code: str, details: Optional[Dict[str, Any]] = None
+    ):
         super().__init__(message)
         self.message = message
         self.error_code = error_code
@@ -30,7 +32,7 @@ class BacktestDataException(Exception):
         return {
             "error": self.error_code,
             "message": self.message,
-            "details": self.details
+            "details": self.details,
         }
 
 
@@ -52,7 +54,7 @@ class CandlestickDataNotAvailableException(BacktestDataException):
         available_symbols: Optional[List[str]] = None,
         available_resolutions: Optional[List[str]] = None,
         available_date_range: Optional[Dict[str, datetime]] = None,
-        message: Optional[str] = None
+        message: Optional[str] = None,
     ):
         """
         Initialize the candlestick data not available exception.
@@ -86,15 +88,21 @@ class CandlestickDataNotAvailableException(BacktestDataException):
             "available_symbols": available_symbols,
             "available_resolutions": available_resolutions,
             "available_date_range": {
-                "start": available_date_range["start"].isoformat() if available_date_range and "start" in available_date_range else None,
-                "end": available_date_range["end"].isoformat() if available_date_range and "end" in available_date_range else None
-            } if available_date_range else None
+                "start": available_date_range["start"].isoformat()
+                if available_date_range and "start" in available_date_range
+                else None,
+                "end": available_date_range["end"].isoformat()
+                if available_date_range and "end" in available_date_range
+                else None,
+            }
+            if available_date_range
+            else None,
         }
 
         super().__init__(
             message=message,
             error_code="CANDLESTICK_DATA_NOT_AVAILABLE",
-            details=details
+            details=details,
         )
 
         # Store original objects for programmatic access
@@ -118,13 +126,18 @@ class CandlestickDataNotAvailableException(BacktestDataException):
         if self.available_symbols and len(self.available_symbols) > 0:
             # Find similar symbols (case-insensitive partial matches)
             similar_symbols = [
-                s for s in self.available_symbols
+                s
+                for s in self.available_symbols
                 if self.symbol.lower() in s.lower() or s.lower() in self.symbol.lower()
             ]
             if similar_symbols:
-                suggestions["similar_symbols"] = similar_symbols[:5]  # Limit to 5 suggestions
+                suggestions["similar_symbols"] = similar_symbols[
+                    :5
+                ]  # Limit to 5 suggestions
             else:
-                suggestions["available_symbols"] = self.available_symbols[:10]  # Show first 10
+                suggestions["available_symbols"] = self.available_symbols[
+                    :10
+                ]  # Show first 10
 
         if self.available_resolutions and len(self.available_resolutions) > 0:
             suggestions["available_resolutions"] = self.available_resolutions
@@ -132,16 +145,14 @@ class CandlestickDataNotAvailableException(BacktestDataException):
         if self.available_date_range:
             suggestions["available_date_range"] = {
                 "start": self.available_date_range["start"].isoformat(),
-                "end": self.available_date_range["end"].isoformat()
+                "end": self.available_date_range["end"].isoformat(),
             }
 
         return suggestions
 
     @classmethod
     def symbol_not_found(
-        cls,
-        symbol: str,
-        available_symbols: Optional[List[str]] = None
+        cls, symbol: str, available_symbols: Optional[List[str]] = None
     ) -> "CandlestickDataNotAvailableException":
         """
         Create exception for when a symbol is not found in the backtest data.
@@ -157,7 +168,7 @@ class CandlestickDataNotAvailableException(BacktestDataException):
             symbol=symbol,
             resolution="any",
             available_symbols=available_symbols,
-            message=f"Symbol '{symbol}' not found in backtest data"
+            message=f"Symbol '{symbol}' not found in backtest data",
         )
 
     @classmethod
@@ -165,7 +176,7 @@ class CandlestickDataNotAvailableException(BacktestDataException):
         cls,
         symbol: str,
         resolution: str,
-        available_resolutions: Optional[List[str]] = None
+        available_resolutions: Optional[List[str]] = None,
     ) -> "CandlestickDataNotAvailableException":
         """
         Create exception for when a resolution is not available for a symbol.
@@ -182,7 +193,7 @@ class CandlestickDataNotAvailableException(BacktestDataException):
             symbol=symbol,
             resolution=resolution,
             available_resolutions=available_resolutions,
-            message=f"Resolution '{resolution}' not available for symbol '{symbol}'"
+            message=f"Resolution '{resolution}' not available for symbol '{symbol}'",
         )
 
     @classmethod
@@ -192,7 +203,7 @@ class CandlestickDataNotAvailableException(BacktestDataException):
         resolution: str,
         start_time: datetime,
         end_time: datetime,
-        available_date_range: Optional[Dict[str, datetime]] = None
+        available_date_range: Optional[Dict[str, datetime]] = None,
     ) -> "CandlestickDataNotAvailableException":
         """
         Create exception for when data is not available for the requested time range.
@@ -214,7 +225,7 @@ class CandlestickDataNotAvailableException(BacktestDataException):
             end_time=end_time,
             available_date_range=available_date_range,
             message=f"Data not available for symbol '{symbol}' at resolution '{resolution}' "
-                   f"for time range {start_time.isoformat()} to {end_time.isoformat()}"
+            f"for time range {start_time.isoformat()} to {end_time.isoformat()}",
         )
 
 
@@ -230,7 +241,7 @@ class SymbolNotAvailableException(BacktestDataException):
         self,
         symbol: str,
         available_symbols: Optional[List[str]] = None,
-        message: Optional[str] = None
+        message: Optional[str] = None,
     ):
         """
         Initialize the symbol not available exception.
@@ -249,13 +260,12 @@ class SymbolNotAvailableException(BacktestDataException):
         }
 
         super().__init__(
-            message=message,
-            error_code="SYMBOL_NOT_AVAILABLE",
-            details=details
+            message=message, error_code="SYMBOL_NOT_AVAILABLE", details=details
         )
 
         self.symbol = symbol
         self.available_symbols = available_symbols
+
 
 class ResolutionNotAvailableException(BacktestDataException):
     """
@@ -271,7 +281,7 @@ class ResolutionNotAvailableException(BacktestDataException):
         symbol: str,
         resolution: str,
         available_resolutions: Optional[List[str]] = None,
-        message: Optional[str] = None
+        message: Optional[str] = None,
     ):
         """
         Initialize the resolution not available exception.
@@ -283,26 +293,30 @@ class ResolutionNotAvailableException(BacktestDataException):
             message: Custom error message (auto-generated if not provided)
         """
         if message is None:
-            message = f"Resolution '{resolution}' is not available for symbol '{symbol}'"
+            message = (
+                f"Resolution '{resolution}' is not available for symbol '{symbol}'"
+            )
 
         details = {
             "requested_symbol": symbol,
             "requested_resolution": resolution,
             "available_resolutions": available_resolutions,
-            "suggestions": self._get_resolution_suggestions(resolution, available_resolutions)
+            "suggestions": self._get_resolution_suggestions(
+                resolution, available_resolutions
+            ),
         }
 
         super().__init__(
-            message=message,
-            error_code="RESOLUTION_NOT_AVAILABLE",
-            details=details
+            message=message, error_code="RESOLUTION_NOT_AVAILABLE", details=details
         )
 
         self.symbol = symbol
         self.resolution = resolution
         self.available_resolutions = available_resolutions
 
-    def _get_resolution_suggestions(self, resolution: str, available_resolutions: Optional[List[str]]) -> Dict[str, Any]:
+    def _get_resolution_suggestions(
+        self, resolution: str, available_resolutions: Optional[List[str]]
+    ) -> Dict[str, Any]:
         """
         Get suggestions for similar or alternative resolutions.
 
@@ -328,11 +342,13 @@ class ResolutionNotAvailableException(BacktestDataException):
             "4h": ["1h", "1d", "1w"],
             "1d": ["4h", "1w", "1M"],
             "1w": ["1d", "1M"],
-            "1M": ["1w", "1d"]
+            "1M": ["1w", "1d"],
         }
 
         # Find exact case-insensitive match
-        exact_matches = [r for r in available_resolutions if r.lower() == resolution.lower()]
+        exact_matches = [
+            r for r in available_resolutions if r.lower() == resolution.lower()
+        ]
         if exact_matches:
             suggestions["exact_case_insensitive_match"] = exact_matches[0]
             return suggestions
@@ -340,7 +356,8 @@ class ResolutionNotAvailableException(BacktestDataException):
         # Find hierarchical suggestions
         if resolution in resolution_hierarchy:
             hierarchical_suggestions = [
-                r for r in resolution_hierarchy[resolution]
+                r
+                for r in resolution_hierarchy[resolution]
                 if r in available_resolutions
             ]
             if hierarchical_suggestions:
@@ -368,7 +385,7 @@ class TimeRangeNotAvailableException(BacktestDataException):
         start_time: datetime,
         end_time: datetime,
         available_date_range: Optional[Dict[str, datetime]] = None,
-        message: Optional[str] = None
+        message: Optional[str] = None,
     ):
         """
         Initialize the time range not available exception.
@@ -382,8 +399,10 @@ class TimeRangeNotAvailableException(BacktestDataException):
             message: Custom error message (auto-generated if not provided)
         """
         if message is None:
-            message = (f"Data not available for symbol '{symbol}' at resolution '{resolution}' "
-                      f"for time range {start_time.isoformat()} to {end_time.isoformat()}")
+            message = (
+                f"Data not available for symbol '{symbol}' at resolution '{resolution}' "
+                f"for time range {start_time.isoformat()} to {end_time.isoformat()}"
+            )
 
         details = {
             "requested_symbol": symbol,
@@ -391,16 +410,22 @@ class TimeRangeNotAvailableException(BacktestDataException):
             "requested_start_time": start_time.isoformat(),
             "requested_end_time": end_time.isoformat(),
             "available_date_range": {
-                "start": available_date_range["start"].isoformat() if available_date_range and "start" in available_date_range else None,
-                "end": available_date_range["end"].isoformat() if available_date_range and "end" in available_date_range else None
-            } if available_date_range else None,
-            "suggestions": self._get_time_range_suggestions(start_time, end_time, available_date_range)
+                "start": available_date_range["start"].isoformat()
+                if available_date_range and "start" in available_date_range
+                else None,
+                "end": available_date_range["end"].isoformat()
+                if available_date_range and "end" in available_date_range
+                else None,
+            }
+            if available_date_range
+            else None,
+            "suggestions": self._get_time_range_suggestions(
+                start_time, end_time, available_date_range
+            ),
         }
 
         super().__init__(
-            message=message,
-            error_code="TIME_RANGE_NOT_AVAILABLE",
-            details=details
+            message=message, error_code="TIME_RANGE_NOT_AVAILABLE", details=details
         )
 
         self.symbol = symbol
@@ -413,7 +438,7 @@ class TimeRangeNotAvailableException(BacktestDataException):
         self,
         start_time: datetime,
         end_time: datetime,
-        available_date_range: Optional[Dict[str, datetime]]
+        available_date_range: Optional[Dict[str, datetime]],
     ) -> Dict[str, Any]:
         """
         Get suggestions for alternative time ranges.
@@ -428,7 +453,11 @@ class TimeRangeNotAvailableException(BacktestDataException):
         """
         suggestions = {}
 
-        if not available_date_range or "start" not in available_date_range or "end" not in available_date_range:
+        if (
+            not available_date_range
+            or "start" not in available_date_range
+            or "end" not in available_date_range
+        ):
             return suggestions
 
         available_start = available_date_range["start"]
@@ -442,15 +471,14 @@ class TimeRangeNotAvailableException(BacktestDataException):
             suggestions["adjusted_range"] = {
                 "start": adjusted_start.isoformat(),
                 "end": adjusted_end.isoformat(),
-                "reason": "Adjusted to available data range"
+                "reason": "Adjusted to available data range",
             }
         else:
             # No overlap - suggest available range
             suggestions["available_range"] = {
                 "start": available_start.isoformat(),
                 "end": available_end.isoformat(),
-                "reason": "Requested range is outside available data"
+                "reason": "Requested range is outside available data",
             }
 
         return suggestions
-

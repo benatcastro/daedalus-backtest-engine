@@ -5,12 +5,12 @@ This module provides the primary interface for accessing candlestick data
 from various backtest engines. It abstracts away the complexity of different
 data formats and provides a unified API.
 """
+
 from typing import List, Optional, Dict
 from datetime import datetime
 from abc import ABC, abstractmethod
-import logging
-from models import Backtest
 from backtest_handler.Candle import Candle
+
 
 class DataHandler(ABC):
     """
@@ -35,7 +35,7 @@ class DataHandler(ABC):
         symbol: str,
         start_time: datetime,
         end_time: datetime,
-        resolution: str = "1m"
+        resolution: str = "1m",
     ) -> List[Candle]:
         """
         Retrieve candlestick data for the specified parameters.
@@ -65,7 +65,9 @@ class DataHandler(ABC):
         pass
 
     @abstractmethod
-    async def get_date_range_for_symbol(self, symbol: str) -> Optional[tuple[datetime, datetime]]:
+    async def get_date_range_for_symbol(
+        self, symbol: str
+    ) -> Optional[tuple[datetime, datetime]]:
         """
         Get the available date range for a specific symbol.
 

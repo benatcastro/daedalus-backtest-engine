@@ -1,9 +1,7 @@
 from fastapi import FastAPI
-from datetime import datetime
-import pandas as pd
 from routers import backtest
 from fastapi.middleware.cors import CORSMiddleware
-from database import SessionLocal, engine, Base
+from database import engine, Base
 from config import settings
 
 # Create database tables if they don't exist
@@ -27,6 +25,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/")
 def hello_world():

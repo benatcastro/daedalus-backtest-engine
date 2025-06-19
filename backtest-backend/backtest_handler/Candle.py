@@ -2,8 +2,9 @@
 Core domain models for candlestick data handling.
 These are immutable value objects representing the fundamental data types.
 """
+
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class Candle(BaseModel):
@@ -18,7 +19,10 @@ class Candle(BaseModel):
         close: Closing price
         volume: Trading volume during the period
     """
-    timestamp: datetime = Field(..., description="Unix timestamp or datetime of the candle")
+
+    timestamp: datetime = Field(
+        ..., description="Unix timestamp or datetime of the candle"
+    )
     open: float = Field(..., description="Opening price")
     high: float = Field(..., description="Highest price during the period")
     low: float = Field(..., description="Lowest price during the period")

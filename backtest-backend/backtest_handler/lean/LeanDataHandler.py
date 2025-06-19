@@ -5,9 +5,9 @@ This module provides a minimal implementation of DataHandler for Lean engine
 backtests, focusing on extracting symbol information and providing basic
 candlestick data access capabilities.
 """
+
 import csv
 import io
-import logging
 import time
 import zipfile
 from config import settings
@@ -15,17 +15,17 @@ from logger import logger
 from datetime import datetime
 from models import Backtest
 from backtest_handler.Candle import Candle
-from typing import List, Optional, Set, Dict
+from typing import List, Optional, Dict
 from backtest_handler.DataHandler import DataHandler
 from schemas.LeanBacktest import LeanBacktest, DataRequest
 from backtest_handler.lean.LeanExceptions import UnexpectedZipContentError
 from backtest_handler.Exceptions import (
-    BacktestDataException,
     CandlestickDataNotAvailableException,
     SymbolNotAvailableException,
     ResolutionNotAvailableException,
-    TimeRangeNotAvailableException
+    TimeRangeNotAvailableException,
 )
+
 
 # TODO Normalize the exceptions in abstract class
 class LeanDataHandler(DataHandler):
@@ -46,7 +46,7 @@ class LeanDataHandler(DataHandler):
         symbol: str,
         start_time: datetime,
         end_time: datetime,
-        resolution: str = "minute"
+        resolution: str = "minute",
     ) -> List[Candle]:
         """
         Retrieve candlestick data for the specified parameters.
@@ -68,7 +68,9 @@ class LeanDataHandler(DataHandler):
         """
 
         start_time_processing = time.time()
-        logger.debug(f"Starting to retrieve candles for {symbol} ({resolution}) from {start_time} to {end_time}")
+        logger.debug(
+            f"Starting to retrieve candles for {symbol} ({resolution}) from {start_time} to {end_time}"
+        )
 
         # Get available symbols to validate the request
         available_symbols = await self.get_available_symbols()
@@ -78,45 +80,53 @@ class LeanDataHandler(DataHandler):
         if symbol_upper not in available_symbols:
             logger.warning(f"Symbol '{symbol}' not found in backtest data")
             raise SymbolNotAvailableException(
-                symbol=symbol,
-                available_symbols=list(available_symbols.keys())
+                symbol=symbol, available_symbols=list(available_symbols.keys())
             )
 
         # Validate resolution availability for this symbol
         available_resolutions = available_symbols[symbol_upper]
         resolution_lower = resolution.lower()
         if resolution_lower not in available_resolutions:
-            logger.warning(f"Resolution '{resolution}' not available for symbol '{symbol}'")
+            logger.warning(
+                f"Resolution '{resolution}' not available for symbol '{symbol}'"
+            )
             raise ResolutionNotAvailableException(
                 symbol=symbol,
                 resolution=resolution,
-                available_resolutions=available_resolutions
+                available_resolutions=available_resolutions,
             )
 
         # TODO Manage Quote/Trade files better
         # filter the data request for the correspondendt symbol
         data_requests = list(
-            filter(lambda dr: dr.symbol.lower() == symbol.lower() and dr.resolution.lower() == resolution.lower() and dr.data_type == "trade",
-                   self._backtest.succeeded_data_requests))
+            filter(
+                lambda dr: dr.symbol.lower() == symbol.lower()
+                and dr.resolution.lower() == resolution.lower()
+                and dr.data_type == "trade",
+                self._backtest.succeeded_data_requests,
+            )
+        )
 
         if not data_requests:
-            logger.warning(f"No data requests found for {symbol} with resolution {resolution}")
+            logger.warning(
+                f"No data requests found for {symbol} with resolution {resolution}"
+            )
             raise CandlestickDataNotAvailableException(
                 symbol=symbol,
                 resolution=resolution,
-                message=f"No trade data available for {symbol} at {resolution} resolution"
+                message=f"No trade data available for {symbol} at {resolution} resolution",
             )
 
         result: List[Candle] = []
 
         for data_request in data_requests:
             zip_path = settings.LEAN_BASE_DATA_PATH.joinpath(data_request.path)
-            #logger.debug(f"Proccesing file: {zip_path}")
+            # logger.debug(f"Proccesing file: {zip_path}")
 
             if not zip_path.exists():
                 raise FileNotFoundError(f"ZIP file not found: {zip_path}")
             try:
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
                     # Get list of all files in the ZIP
                     file_list = zip_ref.namelist()
 
@@ -132,14 +142,27 @@ class LeanDataHandler(DataHandler):
 
                         for row in csv_reader:
                             # Unpack the row
-                            milliseconds_since_midnight, open, high, low, close, volume = row
+                            (
+                                milliseconds_since_midnight,
+                                open,
+                                high,
+                                low,
+                                close,
+                                volume,
+                            ) = row
 
                             # Calculate minute and hours from milliseconds since midnight
-                            minute = (int(milliseconds_since_midnight) // 60000) % 60  # get the minute part as int
-                            hour = (int(milliseconds_since_midnight) // 3600000) % 24  # get the hour part as int
+                            minute = (
+                                int(milliseconds_since_midnight) // 60000
+                            ) % 60  # get the minute part as int
+                            hour = (
+                                int(milliseconds_since_midnight) // 3600000
+                            ) % 24  # get the hour part as int
 
                             # Create a new datetime with real date of the candle
-                            candle_date = data_request.date.replace(hour=hour, minute=minute)
+                            candle_date = data_request.date.replace(
+                                hour=hour, minute=minute
+                            )
 
                             # Append the new candle to the result if his datetime is within range
                             # TODO investigate how to handle last candle of the day 00:00
@@ -151,8 +174,9 @@ class LeanDataHandler(DataHandler):
                                         high=float(high),
                                         low=float(low),
                                         close=float(close),
-                                        volume=float(volume)
-                                    ))
+                                        volume=float(volume),
+                                    )
+                                )
 
             except zipfile.BadZipFile as e:
                 logger.error(f"Invalid ZIP file {zip_path}: {e}")
@@ -169,21 +193,22 @@ class LeanDataHandler(DataHandler):
             date_range = await self.get_date_range_for_symbol(symbol)
             available_date_range = None
             if date_range:
-                available_date_range = {
-                    "start": date_range[0],
-                    "end": date_range[1]
-                }
+                available_date_range = {"start": date_range[0], "end": date_range[1]}
 
-            logger.warning(f"No candlestick data found for {symbol} in time range {start_time} to {end_time}")
+            logger.warning(
+                f"No candlestick data found for {symbol} in time range {start_time} to {end_time}"
+            )
             raise TimeRangeNotAvailableException(
                 symbol=symbol,
                 resolution=resolution,
                 start_time=start_time,
                 end_time=end_time,
-                available_date_range=available_date_range
+                available_date_range=available_date_range,
             )
 
-        logger.info(f"Obtained {len(result)} candles for {symbol} in {processing_time:.2f} seconds")
+        logger.info(
+            f"Obtained {len(result)} candles for {symbol} in {processing_time:.2f} seconds"
+        )
         return result
 
     async def get_available_symbols(self) -> Dict[str, List[str]]:
@@ -224,7 +249,9 @@ class LeanDataHandler(DataHandler):
 
         return symbols
 
-    async def get_date_range_for_symbol(self, symbol: str) -> Optional[tuple[datetime, datetime]]:
+    async def get_date_range_for_symbol(
+        self, symbol: str
+    ) -> Optional[tuple[datetime, datetime]]:
         """
         Get the available date range for a symbol in this backtest.
 
