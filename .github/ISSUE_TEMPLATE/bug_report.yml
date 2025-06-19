@@ -1,0 +1,242 @@
+name: 🐛 Bug Report
+description: Report a bug or issue with the Daedalus trading platform
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below to help us reproduce and fix the issue.
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Critical - System unusable, data loss, or security vulnerability
+        - High - Major feature broken, blocking trading operations
+        - Medium - Feature partially working, workaround available
+        - Low - Minor issue, cosmetic problem
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the platform is affected?
+      options:
+        - Frontend Dashboard
+        - Backend API (Python/FastAPI)
+        - User Management (Next.js)
+        - Database Operations
+        - Backtest Engine Integration
+        - Data Visualization/Charts
+        - Performance Analytics
+        - Authentication/Authorization
+        - CI/CD & Deployment
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: "When I try to..., the system..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Please provide step-by-step instructions to reproduce the bug
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Enter data '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should happen instead?
+      placeholder: "I expected the system to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: "Instead, the system..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser (if frontend issue)
+      description: Which browser are you using?
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Other
+        - Not applicable
+    validations:
+      required: false
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser Version (if applicable)
+      description: What version of the browser?
+      placeholder: "e.g., Chrome 120.0.6099.199"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS Sonoma (14.x)
+        - macOS Ventura (13.x)
+        - macOS Monterey (12.x)
+        - Ubuntu 22.04 LTS
+        - Ubuntu 20.04 LTS
+        - Other Linux
+        - Docker Container
+        - Other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: backtest-engine
+    attributes:
+      label: Backtest Engine (if relevant)
+      description: Which backtest engine were you using when the bug occurred?
+      options:
+        - Lean Engine
+        - Custom Engine
+        - Not applicable
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-logs
+    attributes:
+      label: Error Messages/Logs
+      description: Please paste any error messages, console logs, or stack traces
+      placeholder: |
+        ```
+        Paste error messages here
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: console-output
+    attributes:
+      label: Browser Console Output (if frontend issue)
+      description: Open Developer Tools (F12), check the Console tab for errors
+      placeholder: |
+        ```javascript
+        // Paste console errors here
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: network-logs
+    attributes:
+      label: Network Requests (if API issue)
+      description: Check Network tab in Developer Tools for failed requests
+      placeholder: |
+        Request URL: 
+        Status Code: 
+        Response: 
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: trading-data
+    attributes:
+      label: Trading Data Impact
+      description: Does this bug affect trading operations?
+      options:
+        - label: Bug affects live trading strategies
+        - label: Bug affects backtesting results
+        - label: Bug affects portfolio calculations
+        - label: Bug affects risk management
+        - label: Bug affects data integrity
+        - label: Bug is cosmetic/UI only
+
+  - type: textarea
+    id: environment-details
+    attributes:
+      label: Environment Details
+      description: Additional environment information
+      placeholder: |
+        - Docker version (if using containers):
+        - Node.js version:
+        - Python version:
+        - Database version:
+        - Any custom configurations:
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Have you found any temporary workaround for this issue?
+      placeholder: "I can work around this by..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: reproducibility
+    attributes:
+      label: Reproducibility
+      description: How often can you reproduce this bug?
+      options:
+        - label: Always reproducible (100% of the time)
+        - label: Often reproducible (> 50% of the time)
+        - label: Sometimes reproducible (< 50% of the time)
+        - label: Rare occurrence (happened once or twice)
+        - label: Unable to reproduce consistently
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Screenshots, videos, configuration files, or any other relevant information
+      placeholder: "Add any other context, screenshots, or files here"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: data-privacy
+    attributes:
+      label: Data Privacy Confirmation
+      description: Please confirm before submitting
+      options:
+        - label: I have removed any sensitive trading data, API keys, or personal information from this report
+          required: true
+        - label: I understand this issue will be publicly visible on GitHub
+          required: true
