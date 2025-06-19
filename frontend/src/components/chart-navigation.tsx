@@ -1,17 +1,17 @@
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, RotateCcw, Calendar } from "lucide-react"
-import { DateRange } from "@/utils/sample-data-generator"
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, RotateCcw, Calendar } from "lucide-react";
+import { DateRange } from "@/utils/sample-data-generator";
 
 interface ChartNavigationProps {
-  currentRange: DateRange
-  backtestRange: DateRange
-  hasNextPage: boolean
-  hasPreviousPage: boolean
-  loading: boolean
-  onLoadNext: () => Promise<void>
-  onLoadPrevious: () => Promise<void>
-  onJumpToDate?: (date: Date) => Promise<void>
-  onRefresh: () => Promise<void>
+  currentRange: DateRange;
+  backtestRange: DateRange;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  loading: boolean;
+  onLoadNext: () => Promise<void>;
+  onLoadPrevious: () => Promise<void>;
+  onJumpToDate?: (date: Date) => Promise<void>;
+  onRefresh: () => Promise<void>;
 }
 
 export function ChartNavigation({
@@ -23,21 +23,24 @@ export function ChartNavigation({
   onLoadNext,
   onLoadPrevious,
   onJumpToDate,
-  onRefresh
+  onRefresh,
 }: ChartNavigationProps) {
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-    })
-  }
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year:
+        date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+    });
+  };
 
   const calculateProgress = () => {
-    const totalDuration = backtestRange.end.getTime() - backtestRange.start.getTime()
-    const currentStart = currentRange.start.getTime() - backtestRange.start.getTime()
-    return Math.max(0, Math.min(100, (currentStart / totalDuration) * 100))
-  }
+    const totalDuration =
+      backtestRange.end.getTime() - backtestRange.start.getTime();
+    const currentStart =
+      currentRange.start.getTime() - backtestRange.start.getTime();
+    return Math.max(0, Math.min(100, (currentStart / totalDuration) * 100));
+  };
 
   return (
     <div className="flex items-center gap-2 p-2 bg-muted/30 border-b">
@@ -112,5 +115,5 @@ export function ChartNavigation({
         </Button>
       </div>
     </div>
-  )
+  );
 }

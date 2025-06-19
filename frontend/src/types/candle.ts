@@ -1,4 +1,3 @@
-
 interface Candle {
   data: {
     time: number;
@@ -9,4 +8,4 @@ interface Candle {
   }[];
 }
 
-export default Candle
+export default Candle;

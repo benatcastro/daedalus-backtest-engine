@@ -12,11 +12,11 @@ export const processFileStructure = (files: FileList) => {
   // Keep track of all unique folder paths for proper nesting
   const allFolderPaths = new Set<string>();
 
-  Array.from(files).forEach(file => {
+  Array.from(files).forEach((file) => {
     // Get the file path relative to the root folder
     const relativePath = file.webkitRelativePath;
     // Extract the folder path from the relative path
-    const folderPath = relativePath.split('/').slice(0, -1).join('/');
+    const folderPath = relativePath.split("/").slice(0, -1).join("/");
 
     // Add the file to its corresponding folder
     if (!filesByFolder[folderPath]) {
@@ -31,8 +31,8 @@ export const processFileStructure = (files: FileList) => {
 
       // Add all parent folders
       let parentPath = folderPath;
-      while (parentPath.includes('/')) {
-        parentPath = parentPath.split('/').slice(0, -1).join('/');
+      while (parentPath.includes("/")) {
+        parentPath = parentPath.split("/").slice(0, -1).join("/");
         allFolderPaths.add(parentPath);
       }
     }
@@ -47,9 +47,12 @@ export const processFileStructure = (files: FileList) => {
  * @param fileToRemove File to exclude
  * @returns New DataTransfer object with the remaining files
  */
-export const createDataTransferWithoutFile = (files: FileList, fileToRemove: File): DataTransfer => {
+export const createDataTransferWithoutFile = (
+  files: FileList,
+  fileToRemove: File,
+): DataTransfer => {
   const dt = new DataTransfer();
-  Array.from(files).forEach(file => {
+  Array.from(files).forEach((file) => {
     if (file !== fileToRemove) {
       dt.items.add(file);
     }
@@ -63,10 +66,10 @@ export const createDataTransferWithoutFile = (files: FileList, fileToRemove: Fil
  * @returns The parent folder path or null if it's a root folder
  */
 export const getParentFolder = (folderPath: string): string | null => {
-  if (!folderPath.includes('/')) {
+  if (!folderPath.includes("/")) {
     return null; // This is a root folder
   }
-  return folderPath.split('/').slice(0, -1).join('/');
+  return folderPath.split("/").slice(0, -1).join("/");
 };
 
 /**
@@ -75,7 +78,7 @@ export const getParentFolder = (folderPath: string): string | null => {
  * @returns The folder name (last segment of the path)
  */
 export const getFolderName = (folderPath: string): string => {
-  return folderPath.split('/').pop() || folderPath;
+  return folderPath.split("/").pop() || folderPath;
 };
 
 /**
@@ -84,15 +87,20 @@ export const getFolderName = (folderPath: string): string => {
  * @param parentFolderPath The potential parent folder path
  * @returns True if folderPath is a direct child of parentFolderPath
  */
-export const isDirectChild = (folderPath: string, parentFolderPath: string | null): boolean => {
+export const isDirectChild = (
+  folderPath: string,
+  parentFolderPath: string | null,
+): boolean => {
   if (parentFolderPath === null) {
     // If parent is null, check if this is a top-level folder
-    return !folderPath.includes('/');
+    return !folderPath.includes("/");
   }
 
-  const folderParts = folderPath.split('/');
-  const parentParts = parentFolderPath.split('/');
+  const folderParts = folderPath.split("/");
+  const parentParts = parentFolderPath.split("/");
 
-  return folderParts.length === parentParts.length + 1 &&
-    folderPath.startsWith(parentFolderPath + '/');
+  return (
+    folderParts.length === parentParts.length + 1 &&
+    folderPath.startsWith(parentFolderPath + "/")
+  );
 };

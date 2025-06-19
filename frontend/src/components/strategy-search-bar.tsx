@@ -3,7 +3,11 @@
 import { Input } from "@/components/ui/input"; // if you are using shadcn UI
 import { useState } from "react";
 
-export function StrategySearchBar({ onSearch }: { onSearch: (query: string) => void }) {
+export function StrategySearchBar({
+  onSearch,
+}: {
+  onSearch: (query: string) => void;
+}) {
   const [searchValue, setSearchValue] = useState("");
 
   return (

@@ -3,7 +3,11 @@ import { Form } from "@/components/ui/form";
 import { Strategy, StrategyEngine } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BacktestFormValues, BacktestMetadataFields, backtestFormSchema } from "./backtest-metadata-fields";
+import {
+  BacktestFormValues,
+  BacktestMetadataFields,
+  backtestFormSchema,
+} from "./backtest-metadata-fields";
 import { BacktestFileUpload } from "./backtest-file-upload";
 import axiosInstance from "@/lib/axios";
 
@@ -34,15 +38,11 @@ async function uploadBacktest(
   });
 
   const url = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/`;
-  const response = await axiosInstance.post(
-    url,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
+  const response = await axiosInstance.post(url, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 
   return response.data;
 }

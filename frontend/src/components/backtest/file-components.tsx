@@ -47,13 +47,18 @@ interface FolderTreeViewProps {
 /**
  * Displays a hierarchical view of folders and files
  */
-export function FolderTreeView({ selectedFiles, onRemoveFile }: FolderTreeViewProps) {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+export function FolderTreeView({
+  selectedFiles,
+  onRemoveFile,
+}: FolderTreeViewProps) {
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Toggle folder expansion
   const toggleFolder = (folderPath: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setExpandedFolders(prev => {
+    setExpandedFolders((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(folderPath)) {
         newSet.delete(folderPath);
@@ -72,12 +77,12 @@ export function FolderTreeView({ selectedFiles, onRemoveFile }: FolderTreeViewPr
   const rootFolders: string[] = [];
 
   // Identify root folders and child relationships
-  allFolderPaths.sort().forEach(path => {
-    const parts = path.split('/');
+  allFolderPaths.sort().forEach((path) => {
+    const parts = path.split("/");
     if (parts.length === 1) {
       rootFolders.push(path);
     } else {
-      const parentPath = parts.slice(0, parts.length - 1).join('/');
+      const parentPath = parts.slice(0, parts.length - 1).join("/");
       if (!folderTree[parentPath]) {
         folderTree[parentPath] = [];
       }
@@ -86,17 +91,17 @@ export function FolderTreeView({ selectedFiles, onRemoveFile }: FolderTreeViewPr
   });
 
   // Add standalone files at root level
-  if (filesByFolder[''] && filesByFolder[''].length > 0) {
-    rootFolders.unshift('');
+  if (filesByFolder[""] && filesByFolder[""].length > 0) {
+    rootFolders.unshift("");
   }
 
   // Recursive function to render a folder and its contents
   const renderFolder = (folderPath: string, depth: number = 0) => {
     const files = filesByFolder[folderPath] || [];
     const isExpanded = expandedFolders.has(folderPath);
-    const folderName = folderPath ? folderPath.split('/').pop() : 'Files';
+    const folderName = folderPath ? folderPath.split("/").pop() : "Files";
     const childFolders = folderTree[folderPath] || [];
-    const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 12)}` : '';
+    const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 12)}` : "";
 
     return (
       <div key={folderPath} className="mb-2">
@@ -105,14 +110,17 @@ export function FolderTreeView({ selectedFiles, onRemoveFile }: FolderTreeViewPr
           className={`flex items-center gap-1 hover:bg-muted p-1 rounded cursor-pointer ${indentClass}`}
           onClick={(e) => toggleFolder(folderPath, e)}
         >
-          {isExpanded ?
-            <ChevronDown className="h-4 w-4" /> :
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
             <ChevronRight className="h-4 w-4" />
-          }
+          )}
           <Folder className="h-4 w-4 text-blue-500" />
-          <span className="font-medium">{folderName || 'Root'}</span>
+          <span className="font-medium">{folderName || "Root"}</span>
           <span className="text-xs text-muted-foreground">
-            ({files.length} files{childFolders.length > 0 ? ` + ${childFolders.length} folders` : ''})
+            ({files.length} files
+            {childFolders.length > 0 ? ` + ${childFolders.length} folders` : ""}
+            )
           </span>
         </div>
 
@@ -120,7 +128,9 @@ export function FolderTreeView({ selectedFiles, onRemoveFile }: FolderTreeViewPr
         {isExpanded && (
           <div className="ml-6">
             {/* First render subfolders */}
-            {childFolders.map(childPath => renderFolder(childPath, depth + 1))}
+            {childFolders.map((childPath) =>
+              renderFolder(childPath, depth + 1),
+            )}
 
             {/* Then render files */}
             {files.length > 0 && (
@@ -128,7 +138,7 @@ export function FolderTreeView({ selectedFiles, onRemoveFile }: FolderTreeViewPr
                 {files.map((file, idx) => {
                   // Extract just the filename from the path
                   const fileName = file.webkitRelativePath
-                    ? file.webkitRelativePath.split('/').pop()
+                    ? file.webkitRelativePath.split("/").pop()
                     : file.name;
 
                   return (
@@ -151,7 +161,7 @@ export function FolderTreeView({ selectedFiles, onRemoveFile }: FolderTreeViewPr
   return (
     <div className="w-full">
       <div className="max-h-40 overflow-y-auto border rounded p-2">
-        {rootFolders.map(folderPath => renderFolder(folderPath))}
+        {rootFolders.map((folderPath) => renderFolder(folderPath))}
       </div>
     </div>
   );
@@ -169,7 +179,11 @@ interface FileDisplayListProps {
 /**
  * Component to display selected files with clear option
  */
-export function FileDisplayList({ selectedFiles, onRemoveFile, onClearFiles }: FileDisplayListProps) {
+export function FileDisplayList({
+  selectedFiles,
+  onRemoveFile,
+  onClearFiles,
+}: FileDisplayListProps) {
   if (!selectedFiles || selectedFiles.length === 0) {
     return null;
   }
@@ -177,7 +191,9 @@ export function FileDisplayList({ selectedFiles, onRemoveFile, onClearFiles }: F
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium">{selectedFiles.length} files selected</span>
+        <span className="text-sm font-medium">
+          {selectedFiles.length} files selected
+        </span>
         <button
           type="button"
           className="text-sm text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition"
@@ -189,7 +205,10 @@ export function FileDisplayList({ selectedFiles, onRemoveFile, onClearFiles }: F
           Clear
         </button>
       </div>
-      <FolderTreeView selectedFiles={selectedFiles} onRemoveFile={onRemoveFile} />
+      <FolderTreeView
+        selectedFiles={selectedFiles}
+        onRemoveFile={onRemoveFile}
+      />
     </div>
   );
 }

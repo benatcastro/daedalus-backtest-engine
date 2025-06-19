@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers as SessionProvider } from "@/components/providers/session-provider";
 import { SWRProvider } from "@/components/providers/swr-provider";
-import { Providers as ThemeProvider } from "@/components/providers/theme-provider"
-import { TopBar } from "@/components/ui/topbar"
+import { Providers as ThemeProvider } from "@/components/providers/theme-provider";
+import { TopBar } from "@/components/ui/topbar";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -27,10 +27,8 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <SessionProvider>
-                <TopBar />
-                <div className="flex-1 overflow-hidden">
-                  {children}
-                </div>
+              <TopBar />
+              <div className="flex-1 overflow-hidden">{children}</div>
             </SessionProvider>
           </ThemeProvider>
         </SWRProvider>

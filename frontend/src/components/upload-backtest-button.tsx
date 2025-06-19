@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -6,14 +6,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Plus } from "lucide-react"
+} from "@/components/ui/dialog";
+import { Plus } from "lucide-react";
 import { Strategy } from "@prisma/client";
 import { BacktestForm } from "./backtest/backtest-form";
 
 type UploadBacktestButtonProps = {
   strategy: Strategy;
-}
+};
 
 /**
  * Button component that opens a dialog for uploading a new backtest
@@ -23,7 +23,8 @@ export function UploadBacktestButton({ strategy }: UploadBacktestButtonProps) {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline">
-          <Plus className="mr-2" />Upload Backtest
+          <Plus className="mr-2" />
+          Upload Backtest
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[64rem]">
