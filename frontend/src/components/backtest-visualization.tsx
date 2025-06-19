@@ -1,38 +1,48 @@
-'use client'
-import { useRef } from "react"
-import { Separator } from "@/components/ui/separator"
-import { Strategy } from "@prisma/client"
-import Backtest from "@/app/types/backtest"
-import { Button } from "@/components/ui/button"
-import BacktestChart from "@/components/backtest-chart"
-import { useMemo, useEffect, } from "react"
-import { backtestDatesToRange, generateSampleCandlestickData, generateSampleCandlestickDataFromTimes } from "@/utils/sample-data-generator"
-import { Time } from "lightweight-charts"
-import { IRange } from "lightweight-charts"
-import { ChartDataBuffer } from "@/lib/chart-data-buffer"
-import { CandlestickData } from "lightweight-charts"
-import { DateRange } from "@/utils/sample-data-generator"
-import Chart from "./chart/chart"
-import { Series } from "./chart/series"
-import { useDataFeed } from "@/hooks/use-data-feed"
+"use client";
+import { useRef } from "react";
+import { Separator } from "@/components/ui/separator";
+import { Strategy } from "@prisma/client";
+import Backtest from "@/app/types/backtest";
+import { Button } from "@/components/ui/button";
+import BacktestChart from "@/components/backtest-chart";
+import { useMemo, useEffect } from "react";
+import {
+  backtestDatesToRange,
+  generateSampleCandlestickData,
+  generateSampleCandlestickDataFromTimes,
+} from "@/utils/sample-data-generator";
+import { Time } from "lightweight-charts";
+import { IRange } from "lightweight-charts";
+import { ChartDataBuffer } from "@/lib/chart-data-buffer";
+import { CandlestickData } from "lightweight-charts";
+import { DateRange } from "@/utils/sample-data-generator";
+import Chart from "./chart/chart";
+import { Series } from "./chart/series";
+import { useDataFeed } from "@/hooks/use-data-feed";
 
 interface BacktestVisualizationProps {
-  strategy: Strategy
-  backtest: Backtest
+  strategy: Strategy;
+  backtest: Backtest;
 }
 
-export function BacktestVisualization({ strategy, backtest  }: BacktestVisualizationProps) {
+export function BacktestVisualization({
+  strategy,
+  backtest,
+}: BacktestVisualizationProps) {
   // Extract backtest data for chart generation
   const backtestInfo = useMemo(() => {
-    const dateRange = backtestDatesToRange(backtest.starting_date, backtest.ending_date)
+    const dateRange = backtestDatesToRange(
+      backtest.starting_date,
+      backtest.ending_date,
+    );
     return {
       strategy,
       backtest,
       dateRange: dateRange,
-    }
-  }, [strategy.id, backtest.id])
-  const [candlesticDataFeed, isCandleStickDataFeedLoading] = useDataFeed(backtest)
-
+    };
+  }, [strategy.id, backtest.id]);
+  const [candlesticDataFeed, isCandleStickDataFeedLoading] =
+    useDataFeed(backtest);
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -41,9 +51,13 @@ export function BacktestVisualization({ strategy, backtest  }: BacktestVisualiza
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div>
-              <h1 className="text-xl font-bold">{strategy.name} - {backtest.name}</h1>
+              <h1 className="text-xl font-bold">
+                {strategy.name} - {backtest.name}
+              </h1>
               <p className="text-xs text-muted-foreground">
-                Backtest ID: {backtest.id} | {backtestInfo.dateRange.start.toLocaleDateString()} - {backtestInfo.dateRange.end.toLocaleDateString()}
+                Backtest ID: {backtest.id} |{" "}
+                {backtestInfo.dateRange.start.toLocaleDateString()} -{" "}
+                {backtestInfo.dateRange.end.toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -75,16 +89,13 @@ export function BacktestVisualization({ strategy, backtest  }: BacktestVisualiza
         <div className="flex-1 flex flex-col min-h-0">
           {/* Chart Navigation */}
           <div className="flex-1 bg-background p-4 min-h-0">
-              <Chart >
-                {candlesticDataFeed ?
-                  <Series
-                    type="candlestick"
-                    dataFeed={candlesticDataFeed}
-                  />
-                :
-                  <h1>Candlestick DataFeed is loading</h1>
-                }
-              </Chart>
+            <Chart>
+              {candlesticDataFeed ? (
+                <Series type="candlestick" dataFeed={candlesticDataFeed} />
+              ) : (
+                <h1>Candlestick DataFeed is loading</h1>
+              )}
+            </Chart>
           </div>
         </div>
 
@@ -101,13 +112,19 @@ export function BacktestVisualization({ strategy, backtest  }: BacktestVisualiza
                 <div className="flex justify-between">
                   <span>Period:</span>
                   <span className="text-muted-foreground">
-                    {Math.ceil((backtestInfo.dateRange.end.getTime() - backtestInfo.dateRange.start.getTime()) / (1000 * 60 * 60 * 24))} days
+                    {Math.ceil(
+                      (backtestInfo.dateRange.end.getTime() -
+                        backtestInfo.dateRange.start.getTime()) /
+                        (1000 * 60 * 60 * 24),
+                    )}{" "}
+                    days
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Current View:</span>
                   <span className="text-muted-foreground text-xs">
-                    {backtestInfo.dateRange.start.toLocaleDateString()} - {backtestInfo.dateRange.end.toLocaleDateString()}
+                    {backtestInfo.dateRange.start.toLocaleDateString()} -{" "}
+                    {backtestInfo.dateRange.end.toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -142,7 +159,9 @@ export function BacktestVisualization({ strategy, backtest  }: BacktestVisualiza
             <div>
               <h3 className="font-semibold mb-2">Annotations</h3>
               <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">No annotations yet</div>
+                <div className="text-sm text-muted-foreground">
+                  No annotations yet
+                </div>
                 <Button variant="outline" size="sm" className="w-full">
                   Add Note
                 </Button>
@@ -155,9 +174,11 @@ export function BacktestVisualization({ strategy, backtest  }: BacktestVisualiza
       {/* Bottom Timeline Navigator & Event Markers */}
       <div className="h-32 border-t bg-muted/30 p-4 flex-shrink-0">
         <div className="h-full border rounded bg-background flex items-center justify-center">
-          <span className="text-muted-foreground">Timeline Navigator & Event Markers</span>
+          <span className="text-muted-foreground">
+            Timeline Navigator & Event Markers
+          </span>
         </div>
       </div>
     </div>
-  )
+  );
 }

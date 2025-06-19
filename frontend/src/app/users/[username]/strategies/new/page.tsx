@@ -1,36 +1,41 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { notFound, useRouter } from 'next/navigation'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getSession, useSession } from 'next-auth/react'
-
+import { useState } from "react";
+import { notFound, useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getSession, useSession } from "next-auth/react";
 
 export default function NewStrategyPage() {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [engine, setEngine] = useState('LEAN')
-  const router = useRouter()
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [engine, setEngine] = useState("LEAN");
+  const router = useRouter();
 
-  const { data: session } = useSession()
+  const { data: session } = useSession();
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const res = await fetch('/api/strategies', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/strategies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, description, engine }),
-    })
+    });
 
     if (res.ok) {
-      router.push(`/users/${session?.user?.name}/strategies`)
+      router.push(`/users/${session?.user?.name}/strategies`);
     } else {
-      alert('Failed to create strategy')
+      alert("Failed to create strategy");
     }
-  }
+  };
 
   return (
     <div className="max-w-md mx-auto mt-10 space-y-6">
@@ -58,7 +63,12 @@ export default function NewStrategyPage() {
 
         <div>
           <Label>Engine</Label>
-          <Select value={engine} onValueChange={(value) => setEngine(value as "LEAN" | "BACKTESTING")}>
+          <Select
+            value={engine}
+            onValueChange={(value) =>
+              setEngine(value as "LEAN" | "BACKTESTING")
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select engine" />
             </SelectTrigger>
@@ -72,5 +82,5 @@ export default function NewStrategyPage() {
         <Button type="submit">Create Strategy</Button>
       </form>
     </div>
-  )
+  );
 }

@@ -5,9 +5,9 @@
  */
 export enum BacktestEngine {
   /** Lean Algorithm Framework engine */
-  LEAN = 'LEAN',
+  LEAN = "LEAN",
   /** Generic backtesting engine */
-  BACKTESTING = 'BACKTESTING'
+  BACKTESTING = "BACKTESTING",
 }
 
 export default BacktestEngine;

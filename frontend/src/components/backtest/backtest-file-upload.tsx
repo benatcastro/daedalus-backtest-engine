@@ -1,5 +1,11 @@
 import { Card } from "@/components/ui/card";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,7 +57,10 @@ export function BacktestFileUpload({ form }: BacktestFileUploadProps) {
     }
   };
 
-  const handleDrop = (e: React.DragEvent, onChange: (...event: any[]) => void) => {
+  const handleDrop = (
+    e: React.DragEvent,
+    onChange: (...event: any[]) => void,
+  ) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -92,7 +101,7 @@ export function BacktestFileUpload({ form }: BacktestFileUploadProps) {
     setSelectedFiles(null);
     // Reset the field instead of setting to undefined
     form.resetField("files");
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
@@ -112,7 +121,7 @@ export function BacktestFileUpload({ form }: BacktestFileUploadProps) {
                 onDrop={(e) => handleDrop(e, onChange)}
               >
                 <Card
-                  className={`cursor-pointer flex flex-col items-center justify-center p-8 border-dashed border-2 ${selectedFiles && selectedFiles.length > 0 ? '' : 'hover:bg-muted'} transition ${isDragging ? 'ring-2 ring-primary border-2' : ''}`}
+                  className={`cursor-pointer flex flex-col items-center justify-center p-8 border-dashed border-2 ${selectedFiles && selectedFiles.length > 0 ? "" : "hover:bg-muted"} transition ${isDragging ? "ring-2 ring-primary border-2" : ""}`}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {selectedFiles && selectedFiles.length > 0 ? (
@@ -126,7 +135,8 @@ export function BacktestFileUpload({ form }: BacktestFileUploadProps) {
                       <Plus className="w-6 h-6 mb-2 text-muted-foreground" />
                       <div className="flex flex-col items-center">
                         <span className="text-muted-foreground mb-1">
-                          Click to select a folder or drag and drop individual files
+                          Click to select a folder or drag and drop individual
+                          files
                         </span>
                         <span className="text-xs text-muted-foreground">
                           You can select a folder containing your backtest files
@@ -162,7 +172,8 @@ export function BacktestFileUpload({ form }: BacktestFileUploadProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Folder Drop Not Allowed</AlertDialogTitle>
             <AlertDialogDescription>
-              You cannot drag and drop folders directly. Please use the "Click to select a folder" button instead to upload folder contents.
+              You cannot drag and drop folders directly. Please use the "Click
+              to select a folder" button instead to upload folder contents.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

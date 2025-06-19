@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
@@ -29,7 +29,9 @@ export function TopBar() {
                 href={item.href}
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-primary",
-                  pathname === item.href ? "text-primary" : "text-muted-foreground"
+                  pathname === item.href
+                    ? "text-primary"
+                    : "text-muted-foreground",
                 )}
               >
                 {item.name}
@@ -53,13 +55,14 @@ export function TopBar() {
                   className="rounded-full cursor-pointer"
                 />
               </Link>
-            </> ) : (
-              <Button onClick={() => signIn()} variant="outline" size="sm">
-                Sign In
-              </Button>
+            </>
+          ) : (
+            <Button onClick={() => signIn()} variant="outline" size="sm">
+              Sign In
+            </Button>
           )}
         </div>
       </div>
     </header>
-    );
+  );
 }

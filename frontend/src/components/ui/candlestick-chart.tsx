@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { createChart } from 'lightweight-charts';
+import { useEffect, useRef } from "react";
+import { createChart } from "lightweight-charts";
 
 export default function CandlestickChart({ data }) {
   const chartContainerRef = useRef();
@@ -11,12 +11,12 @@ export default function CandlestickChart({ data }) {
       width: chartContainerRef.current.clientWidth,
       height: 400,
       layout: {
-        background: { color: '#ffffff' },
-        textColor: '#000',
+        background: { color: "#ffffff" },
+        textColor: "#000",
       },
       grid: {
-        vertLines: { color: '#eee' },
-        horzLines: { color: '#eee' },
+        vertLines: { color: "#eee" },
+        horzLines: { color: "#eee" },
       },
       priceScale: {
         borderVisible: false,
@@ -38,13 +38,15 @@ export default function CandlestickChart({ data }) {
       });
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     return () => {
       chart.remove();
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
     };
   }, [data]);
 
-  return <div ref={chartContainerRef} style={{ width: '100%', height: '400px' }} />;
+  return (
+    <div ref={chartContainerRef} style={{ width: "100%", height: "400px" }} />
+  );
 }

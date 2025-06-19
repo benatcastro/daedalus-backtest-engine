@@ -1,18 +1,25 @@
 import { useCallback, useState, createContext, ReactNode } from "react";
 import { ChartContainer } from "./chart-container";
-import { IChartApi, ISeriesApi, DeepPartial, ChartOptions, IRange, Time } from "lightweight-charts";
+import {
+  IChartApi,
+  ISeriesApi,
+  DeepPartial,
+  ChartOptions,
+  IRange,
+  Time,
+} from "lightweight-charts";
 import { DataFeed } from "@/lib/data-feed";
 
 export interface ChartApiRef {
   isRemoved: boolean;
   _api?: IChartApi;
-  _dataFeeds: DataFeed<any>[]
+  _dataFeeds: DataFeed<any>[];
   _lastNotLoadingViewRange: IRange<Time> | null;
   api(): IChartApi;
   free(series?: ISeriesApi<any>): void;
   addDataFeed(dataFeed: DataFeed<any>): void;
   removeDataFeed(dataFeed: DataFeed<any>): void;
-  timeRangeChangeEventHandler(timeRange: IRange<Time> | null): void
+  timeRangeChangeEventHandler(timeRange: IRange<Time> | null): void;
 }
 
 interface ChartProps extends DeepPartial<ChartOptions> {
@@ -30,21 +37,24 @@ export default function Chart(props: ChartProps) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
 
   // Function used to store the ref and update the state
-  const handleRef = useCallback((ref: HTMLElement | null) => setContainer(ref), []);
+  const handleRef = useCallback(
+    (ref: HTMLElement | null) => setContainer(ref),
+    [],
+  );
 
   return (
-      <div
-        ref={handleRef}
-        style={{
-          width: props.width || '100%',
-          height: '100%'
-        }}
-      >
-          {container && (
-            <ChartContainer {...chartOptions} container={container}>
-              {children}
-            </ChartContainer>
-          )}
-      </div>
+    <div
+      ref={handleRef}
+      style={{
+        width: props.width || "100%",
+        height: "100%",
+      }}
+    >
+      {container && (
+        <ChartContainer {...chartOptions} container={container}>
+          {children}
+        </ChartContainer>
+      )}
+    </div>
   );
 }
