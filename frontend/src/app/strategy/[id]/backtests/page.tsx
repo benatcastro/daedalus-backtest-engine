@@ -24,7 +24,7 @@ export default function Page({ params }: Props) {
     `/api/v1/backtest/${id}`,
   ]);
 
-  if (isLoading) {
+  if (isBacktestLoading || isStrategyLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="animate-spin h-12 w-12 text-gray-500" />
@@ -37,7 +37,7 @@ export default function Page({ params }: Props) {
     return <p>Error loading strategy.</p>;
   }
 
-  const [strategy, backtests] = data!;
+  console.log("back: ", backtests, strategy)
 
   // Search bar for the backtests
   const selectedBacktest = selectedBacktestId
