@@ -1,0 +1,97 @@
+name: ⚙️ DevOps Change
+description: Request infrastructure, deployment, or operational changes for the Daedalus platform
+title: "[DEVOPS] "
+labels: ["devops", "infrastructure", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for requesting a DevOps change! Please fill out the sections below to help us understand and implement the infrastructure or operational changes.
+
+  - type: dropdown
+    id: change-type
+    attributes:
+      label: Change Type
+      description: What type of DevOps change are you requesting?
+      options:
+        - Infrastructure provisioning/modification
+        - CI/CD pipeline changes
+        - Docker container updates
+        - Database migration/schema changes
+        - Security configuration
+        - Monitoring and alerting
+        - Backup and recovery
+        - Performance optimization
+        - Environment configuration
+        - Deployment automation
+        - Network configuration
+        - Third-party service integration
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How urgent is this change?
+      options:
+        - Critical - Production down or security vulnerability
+        - High - Blocking development or deployment
+        - Medium - Improves efficiency or reliability
+        - Low - Nice to have improvement
+    validations:
+      required: true
+
+# Uncomment when using environments
+#  - type: dropdown
+#    id: environment
+#    attributes:
+#      label: Target Environment
+#      description: Which environment(s) will be affected?
+#      options:
+#        - Production
+#        - Staging
+#        - Development
+#        - All environments
+#        - Local development
+#        - CI/CD infrastructure
+#    validations:
+#      required: true
+
+  - type: textarea
+    id: change-description
+    attributes:
+      label: Change Description
+      description: Clearly describe the DevOps change you need
+      placeholder: "I need to configure/deploy/modify..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation-approach
+    attributes:
+      label: Implementation Approach
+      description: Do you have any suggestions for how to implement this change?
+      placeholder: "This could be implemented by..."
+    validations:
+      required: false
+
+    id: monitoring-alerting
+    attributes:
+      label: Monitoring & Alerting
+      description: What monitoring or alerting should be added/modified?
+      placeholder: "We should monitor... and alert when..."
+    validations:
+      required: false
+
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Architecture diagrams, reference implementations, or any other relevant information
+      placeholder: "Add any other context, diagrams, links, or examples here"
+    validations:
+      required: false
