@@ -1,0 +1,289 @@
+# filepath: /home/bena/Projects/daedalus/.github/workflows/auto-branch-creation.yml
+name: Auto Branch Creation
+
+# Trigger workflow when issues are opened
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    
+    # Only run for specific issue types (skip if issue has certain labels)
+    if: >
+      !contains(github.event.issue.labels.*.name, 'duplicate') &&
+      !contains(github.event.issue.labels.*.name, 'invalid') &&
+      !contains(github.event.issue.labels.*.name, 'wontfix')
+    
+    permissions:
+      contents: write
+      issues: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Determine branch type and name
+        id: branch-info
+        run: |
+          # Get issue information
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_LABELS="${{ join(github.event.issue.labels.*.name, ',') }}"
+          
+          echo "Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
+          echo "Labels: $ISSUE_LABELS"
+          
+          # Determine branch prefix based on issue title and labels
+          BRANCH_PREFIX=""
+          
+          # Check if it's a feature request
+          if echo "$ISSUE_TITLE" | grep -i "\[FEATURE\]" > /dev/null || echo "$ISSUE_LABELS" | grep -i "enhancement\|feature" > /dev/null; then
+            BRANCH_PREFIX="feat"
+          # Check if it's a bug report
+          elif echo "$ISSUE_TITLE" | grep -i "\[BUG\]" > /dev/null || echo "$ISSUE_LABELS" | grep -i "bug" > /dev/null; then
+            BRANCH_PREFIX="fix"
+          # Check if it's a DevOps change
+          elif echo "$ISSUE_TITLE" | grep -i "\[DEVOPS\]" > /dev/null || echo "$ISSUE_LABELS" | grep -i "devops\|infrastructure" > /dev/null; then
+            BRANCH_PREFIX="ops"
+          # Check for other common types
+          elif echo "$ISSUE_LABELS" | grep -i "documentation" > /dev/null; then
+            BRANCH_PREFIX="docs"
+          elif echo "$ISSUE_LABELS" | grep -i "refactor" > /dev/null; then
+            BRANCH_PREFIX="refactor"
+          elif echo "$ISSUE_LABELS" | grep -i "test" > /dev/null; then
+            BRANCH_PREFIX="test"
+          else
+            # Default to feature for unknown types
+            BRANCH_PREFIX="feat"
+          fi
+          
+          # Clean up issue title for branch name
+          # Remove prefixes like [FEATURE], [BUG], [DEVOPS]
+          CLEAN_TITLE=$(echo "$ISSUE_TITLE" | sed -E 's/^\[[A-Z]+\]\s*//' | sed -E 's/^\s+|\s+$//')
+          
+          # Convert to lowercase, replace spaces and special chars with hyphens
+          # Limit to reasonable length (max 50 chars for the title part)
+          TITLE_SLUG=$(echo "$CLEAN_TITLE" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-50 | sed -E 's/-+$//')
+          
+          # Construct full branch name
+          BRANCH_NAME="${BRANCH_PREFIX}-${ISSUE_NUMBER}-${TITLE_SLUG}"
+          
+          echo "Branch prefix: $BRANCH_PREFIX"
+          echo "Clean title: $CLEAN_TITLE"
+          echo "Title slug: $TITLE_SLUG"
+          echo "Final branch name: $BRANCH_NAME"
+          
+          # Set outputs for next steps
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "branch_prefix=$BRANCH_PREFIX" >> $GITHUB_OUTPUT
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          echo "clean_title=$CLEAN_TITLE" >> $GITHUB_OUTPUT
+
+      - name: Check if branch already exists
+        id: branch-check
+        run: |
+          BRANCH_NAME="${{ steps.branch-info.outputs.branch_name }}"
+          
+          # Check if branch exists locally or remotely
+          if git show-ref --verify --quiet refs/heads/$BRANCH_NAME; then
+            echo "Branch $BRANCH_NAME already exists locally"
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+          elif git ls-remote --heads origin $BRANCH_NAME | grep -q $BRANCH_NAME; then
+            echo "Branch $BRANCH_NAME already exists on remote"
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Branch $BRANCH_NAME does not exist"
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push branch
+        if: steps.branch-check.outputs.branch_exists == 'false'
+        run: |
+          BRANCH_NAME="${{ steps.branch-info.outputs.branch_name }}"
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create new branch from main/master
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+          echo "Creating branch from: $DEFAULT_BRANCH"
+          
+          git checkout $DEFAULT_BRANCH
+          git pull origin $DEFAULT_BRANCH
+          git checkout -b $BRANCH_NAME
+          
+          # Push the new branch
+          git push -u origin $BRANCH_NAME
+          
+          echo "✅ Created and pushed branch: $BRANCH_NAME"
+
+      - name: Create initial commit
+        if: steps.branch-check.outputs.branch_exists == 'false'
+        run: |
+          BRANCH_NAME="${{ steps.branch-info.outputs.branch_name }}"
+          ISSUE_NUMBER="${{ steps.branch-info.outputs.issue_number }}"
+          CLEAN_TITLE="${{ steps.branch-info.outputs.clean_title }}"
+          BRANCH_PREFIX="${{ steps.branch-info.outputs.branch_prefix }}"
+          
+          # Create a placeholder file for the issue
+          mkdir -p .github/issue-branches
+          
+          # Create issue tracking file
+          cat > .github/issue-branches/issue-$ISSUE_NUMBER.md << EOF
+          # Issue #$ISSUE_NUMBER: $CLEAN_TITLE
+          
+          **Branch:** \`$BRANCH_NAME\`
+          **Type:** \`$BRANCH_PREFIX\`
+          **Created:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Issue URL:** https://github.com/${{ github.repository }}/issues/$ISSUE_NUMBER
+          
+          ## Description
+          This branch was automatically created for issue #$ISSUE_NUMBER.
+          
+          ## Getting Started
+          \`\`\`bash
+          # Switch to this branch
+          git checkout $BRANCH_NAME
+          
+          # Pull latest changes
+          git pull origin $BRANCH_NAME
+          
+          # Start working on the issue
+          # Make your changes and commit them
+          git add .
+          git commit -m "$BRANCH_PREFIX: implement issue #$ISSUE_NUMBER"
+          git push origin $BRANCH_NAME
+          \`\`\`
+          
+          ## Checklist
+          - [ ] Understand the requirements from issue #$ISSUE_NUMBER
+          - [ ] Implement the solution
+          - [ ] Add/update tests if applicable
+          - [ ] Update documentation if needed
+          - [ ] Create pull request when ready
+          
+          ---
+          *This file was auto-generated by GitHub Actions*
+          EOF
+          
+          # Commit the tracking file
+          git add .github/issue-branches/issue-$ISSUE_NUMBER.md
+          git commit -m "chore: initialize branch for issue #$ISSUE_NUMBER
+          
+          - Auto-created branch: $BRANCH_NAME
+          - Issue: $CLEAN_TITLE
+          - Type: $BRANCH_PREFIX
+          
+          Closes #$ISSUE_NUMBER"
+          
+          # Push the commit
+          git push origin $BRANCH_NAME
+          
+          echo "✅ Created initial commit with issue tracking file"
+
+      - name: Comment on issue
+        if: steps.branch-check.outputs.branch_exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = '${{ steps.branch-info.outputs.branch_name }}';
+            const branchPrefix = '${{ steps.branch-info.outputs.branch_prefix }}';
+            const issueNumber = '${{ steps.branch-info.outputs.issue_number }}';
+            
+            // Determine emoji based on branch type
+            const typeEmojis = {
+              'feat': '✨',
+              'fix': '🐛', 
+              'ops': '⚙️',
+              'docs': '📖',
+              'refactor': '♻️',
+              'test': '🧪'
+            };
+            
+            const emoji = typeEmojis[branchPrefix] || '🚀';
+            
+            const comment = `${emoji} **Auto-Branch Created**
+            
+            A new branch has been automatically created for this issue:
+            
+            **Branch:** \`${branchName}\`
+            **Type:** \`${branchPrefix}\`
+            
+            ## Getting Started
+            \`\`\`bash
+            # Clone and checkout the branch
+            git fetch origin
+            git checkout ${branchName}
+            
+            # Or if you already have the repo
+            git checkout ${branchName}
+            git pull origin ${branchName}
+            \`\`\`
+            
+            ## Next Steps
+            1. 📝 Review the issue requirements carefully
+            2. 💻 Implement your solution on the \`${branchName}\` branch  
+            3. ✅ Test your changes thoroughly
+            4. 📖 Update documentation if needed
+            5. 🔀 Create a pull request when ready
+            
+            ## Branch Guidelines
+            - Keep commits focused and atomic
+            - Use conventional commit messages (\`${branchPrefix}: description\`)
+            - Reference this issue in your commits (\`#${issueNumber}\`)
+            - Ensure all tests pass before creating PR
+            
+            ---
+            🤖 *This branch was created automatically by GitHub Actions*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Handle existing branch
+        if: steps.branch-check.outputs.branch_exists == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = '${{ steps.branch-info.outputs.branch_name }}';
+            
+            const comment = `ℹ️ **Branch Already Exists**
+            
+            A branch with the name \`${branchName}\` already exists for this issue.
+            
+            You can check it out using:
+            \`\`\`bash
+            git fetch origin
+            git checkout ${branchName}
+            \`\`\`
+            
+            If this is unexpected, please check if there's already work in progress on this issue.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Add branch label
+        if: steps.branch-check.outputs.branch_exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Add a label to indicate branch was created
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['branch-created']
+            });
