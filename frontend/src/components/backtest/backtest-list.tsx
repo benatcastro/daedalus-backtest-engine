@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
-import { UploadBacktestButton } from "@/components/upload-backtest-button";
+import { UploadBacktestButton } from "@/components/backtest/upload-backtest-button";
 import { Container } from "@/components/ui/container";
 
 interface BacktestListProps {

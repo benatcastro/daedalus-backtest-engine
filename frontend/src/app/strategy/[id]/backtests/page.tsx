@@ -4,8 +4,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Strategy } from "@prisma/client";
 import Backtest from "@/app/types/backtest";
-import { BacktestList } from "@/components/backtest-list";
-import { BacktestVisualization } from "@/components/backtest-visualization";
+import { BacktestList } from "@/components/backtest/backtest-list";
+import { BacktestVisualization } from "@/components/backtest/backtest-visualization";
 import { useEffect } from "react";
 
 interface Props {

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { Strategy } from "@prisma/client";
-import { BacktestForm } from "./backtest/backtest-form";
+import { BacktestForm } from "./backtest-form";
 import { useState } from "react";
 import { toast } from "sonner"
 import Backtest from "@/types/backtest";
