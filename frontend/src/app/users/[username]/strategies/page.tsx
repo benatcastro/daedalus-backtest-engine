@@ -58,10 +58,7 @@ async function DisplayMyStrategies({
         <div className="space-y-4">
           <div className="flex flex-col gap-4">
             {strategies.map((strategy) => (
-              <Link
-                key={strategy.id}
-                href={`/strategy/${strategy.id}/backtests`}
-              >
+              <Link key={strategy.id} href={`/strategy/${strategy.id}`}>
                 <StrategyCard strategy={strategy} />
               </Link>
             ))}

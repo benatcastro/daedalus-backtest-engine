@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Strategy } from "@prisma/client";
-import Backtest from "@/app/types/backtest";
+import Backtest from "@/types/backtest";
 import {
   Table,
   TableBody,
@@ -13,22 +13,33 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { UploadBacktestButton } from "@/components/backtest/upload-backtest-button";
 import { Container } from "@/components/ui/container";
+import useSWR from "swr";
+import Link from "next/link";
 
 interface BacktestListProps {
   strategy: Strategy;
-  backtests: Backtest[];
-  onSelectBacktest: (backtest: Backtest) => void;
 }
 
-export function BacktestList({
-  strategy,
-  backtests,
-  onSelectBacktest,
-}: BacktestListProps) {
+export function BacktestList({ strategy }: BacktestListProps) {
   const [search, setSearch] = useState("");
+  // Fetch backtests
+  const {
+    data: backtests,
+    error: backtestError,
+    isLoading: isBacktestLoading,
+    mutate,
+  } = useSWR<Backtest[]>(`/api/v1/backtest/${strategy.id}`);
+
+  if (isBacktestLoading || !backtests) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="animate-spin h-12 w-12 text-gray-500" />
+      </div>
+    );
+  }
 
   // Filter backtests based on search term
   const filteredBacktests = backtests.filter(
@@ -77,7 +88,10 @@ export function BacktestList({
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1"
           />
-          <UploadBacktestButton strategy={strategy} onNewBacktest={() => mutate ? mutate() : undefined} />
+          <UploadBacktestButton
+            strategy={strategy}
+            onNewBacktest={() => (mutate ? mutate() : undefined)}
+          />
         </div>
 
         {filteredBacktests.length === 0 ? (
@@ -117,10 +131,11 @@ export function BacktestList({
                         variant="outline"
                         size="sm"
                         className="flex items-center gap-2"
-                        onClick={() => onSelectBacktest(bt)}
                       >
-                        <Eye className="h-4 w-4" />
-                        View
+                        <Link href={`/backtest/${bt.id}`}>
+                          <Eye className="h-4 w-4" />
+                          View
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>
