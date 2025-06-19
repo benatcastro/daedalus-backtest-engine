@@ -1,23 +1,12 @@
 "use client";
-import { useRef } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Strategy } from "@prisma/client";
-import Backtest from "@/app/types/backtest";
+import Backtest from "@/types/backtest";
 import { Button } from "@/components/ui/button";
-import BacktestChart from "@/components/backtest-chart";
-import { useMemo, useEffect } from "react";
-import {
-  backtestDatesToRange,
-  generateSampleCandlestickData,
-  generateSampleCandlestickDataFromTimes,
-} from "@/utils/sample-data-generator";
-import { Time } from "lightweight-charts";
-import { IRange } from "lightweight-charts";
-import { ChartDataBuffer } from "@/lib/chart-data-buffer";
-import { CandlestickData } from "lightweight-charts";
-import { DateRange } from "@/utils/sample-data-generator";
-import Chart from "./chart/chart";
-import { Series } from "./chart/series";
+import { useMemo } from "react";
+import { backtestDatesToRange } from "@/utils/sample-data-generator";
+import Chart from "@/components/chart/chart";
+import { Series } from "@/components/chart/series";
 import { useDataFeed } from "@/hooks/use-data-feed";
 
 interface BacktestVisualizationProps {
