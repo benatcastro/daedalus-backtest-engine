@@ -5,13 +5,13 @@ This factory provides a centralized way to create appropriate DataHandler
 instances for different backtest engines while maintaining type safety
 and extensibility.
 """
-from typing import Dict, Type, Optional
-from abc import ABC, abstractmethod
-import logging
+
+from typing import Dict, Type
 from models import Backtest
 from backtest_handler.BacktestEngine import BacktestEngine
 from backtest_handler.DataHandler import DataHandler
 from backtest_handler.lean.LeanDataHandler import LeanDataHandler
+
 
 class DataHandlerFactory:
     """

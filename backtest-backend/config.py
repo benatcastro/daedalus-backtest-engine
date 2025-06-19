@@ -2,10 +2,9 @@
 Configuration module for the FastAPI backend.
 Loads environment variables from the top-level .env file.
 """
-import os
+
 from pathlib import Path
-from typing import List, Optional, Dict, Any
-from pydantic import PostgresDsn, field_validator, model_validator
+from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Find the top-level .env file by going up one directory
@@ -19,9 +18,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
-        env_file_encoding='utf-8',
+        env_file_encoding="utf-8",
         case_sensitive=True,
-        extra='allow',
+        extra="allow",
     )
 
     # API Settings
@@ -29,7 +28,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Daedalus Backtest API"
 
     # Debugging
-    DEBUG: bool = True # Read from .env
+    DEBUG: bool = True  # Read from .env
 
     # CORS
     NEXT_PUBLIC_NEXT_API_URL: str
@@ -58,11 +57,12 @@ class Settings(BaseSettings):
         """Return CORS_ORIGINS as a list, regardless of .env format."""
         origins = self.CORS_ORIGINS
         if isinstance(origins, str):
-            self.CORS_ORIGINS = [origin.strip() for origin in origins.split(",") if origin.strip()]
+            self.CORS_ORIGINS = [
+                origin.strip() for origin in origins.split(",") if origin.strip()
+            ]
         if isinstance(origins, list):
             self.CORS_ORIGINS = origins
         self.CORS_ORIGINS
-
 
 
 # Create a global settings instance
