@@ -77,7 +77,7 @@ export function BacktestList({
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1"
           />
-          <UploadBacktestButton strategy={strategy} />
+          <UploadBacktestButton strategy={strategy} onNewBacktest={() => mutate ? mutate() : undefined} />
         </div>
 
         {filteredBacktests.length === 0 ? (
@@ -94,7 +94,6 @@ export function BacktestList({
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Date Range</TableHead>
-                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
