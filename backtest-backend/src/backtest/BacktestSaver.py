@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from backtest.BacktestEngine import BacktestEngine
-from typing import Dict
-from schemas.backtest import BacktestCreate
+from typing import Dict, List
+from schemas.backtest import BacktestCreate, Order
 import datetime
 
 
@@ -43,6 +43,11 @@ class BacktestSaver(ABC):
     @property
     @abstractmethod
     def ending_date(self) -> datetime:
+        pass
+
+    @property
+    @abstractmethod
+    def orders(self) -> List[Order]:
         pass
 
     @property
