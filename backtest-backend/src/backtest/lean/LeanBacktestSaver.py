@@ -1,14 +1,16 @@
 from datetime import datetime
 import re
-import csv
-import zipfile
-from io import TextIOWrapper
+import time
+from schemas.backtest import Order, OrderSide, OrderStatus
 from backtest.BacktestSaver import BacktestSaver
 from backtest.BacktestEngine import BacktestEngine
 from typing import List, Dict, Optional, Any
 from fastapi import UploadFile
 import json
 import os
+import ijson
+from logger import logger
+from decimal import Decimal
 
 # TODO: Update the data request to use the pydantic schema
 from schemas.LeanBacktest import DataRequest
@@ -27,6 +29,7 @@ class LeanBacktestSaver(BacktestSaver):
         self._ending_date: Optional[datetime] = None
         self._succeeded_data_requests: Optional[List[DataRequest]] = None
         self._failed_data_requests: Optional[List[DataRequest]] = None
+        self._orders: List[Order] = []
 
         # Parameters data
         self._trade_statistics: Optional[Dict[Any, Any]] = None
@@ -41,6 +44,7 @@ class LeanBacktestSaver(BacktestSaver):
         self,
         file: UploadFile,
     ):
+        start_time_processing = time.time()
         file_content = await file.read()
         data_requests = file_content.decode().splitlines()
         unique_requests = set()
@@ -57,9 +61,67 @@ class LeanBacktestSaver(BacktestSaver):
                     unique_requests.add(dr_tuple)
                     result.append(new_dr)
 
+        processing_time = time.time() - start_time_processing
+        logger.info(
+            f"Processed {len(result)} data requests in {processing_time:.2f} seconds"
+        )
         return result
 
+    async def _process_orders(self) -> None:
+        """_summary_"""
+        orders_file: UploadFile = self._files.get(
+            f"{self._backtest_id}-order-events.json"
+        )
+
+        start_time_processing = time.time()
+
+        def extract_parameters(values):
+            known_fields = {
+                "orderId",
+                "time",
+                "symbolValue",
+                "direction",
+                "quantity",
+                "status",
+            }
+            extra_fields = {k: v for k, v in values.items() if k not in known_fields}
+
+            def clean_decimals(obj):
+                if isinstance(obj, dict):
+                    return {k: clean_decimals(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [clean_decimals(v) for v in obj]
+                elif isinstance(obj, Decimal):
+                    return float(obj)
+                else:
+                    return obj
+
+            return clean_decimals(extra_fields)
+
+        for entry in ijson.items(orders_file.file, "item"):
+            parameters = extract_parameters(entry)
+
+            # TODO esto es una puta mierda
+            # TODO Manage order status
+            order = Order(
+                order_id=int(entry["orderId"]),
+                time=datetime.fromtimestamp(int(entry["time"])),
+                engine=BacktestEngine.LEAN,
+                symbol=entry["symbolValue"],
+                side=OrderSide(entry["direction"]),
+                quantity=abs(entry["quantity"]),
+                status=OrderStatus.NEW,
+                parameters=parameters,
+            )
+            self._orders.append(order)
+
+        processing_time = time.time() - start_time_processing
+        logger.info(
+            f"Processed {len(self._orders)} orders in {processing_time:.2f} seconds"
+        )
+
     async def process(self):
+        """_summary_"""
         self._backtest_id = await self._get_backtest_id()
 
         # Obtain the summary data
@@ -71,6 +133,9 @@ class LeanBacktestSaver(BacktestSaver):
 
         # Load data requests for parameters
         await self._obtain_data_requests()
+
+        # Process the trade orders
+        await self._process_orders()
 
         # Save summary data for parameters
         self._trade_statistics = summary_data.get("totalPerformance").get(
@@ -137,6 +202,10 @@ class LeanBacktestSaver(BacktestSaver):
         return self._ending_date
 
     @property
+    def orders(self) -> List[Order]:
+        return self._orders
+
+    @property
     def parameters(self):
         # Convert DataRequest objects to dictionaries for JSON serialization
         succeeded_requests = []
@@ -172,48 +241,3 @@ class LeanBacktestSaver(BacktestSaver):
     async def _get_backtest_id(self):
         data = await self._get_json_data(self._files["config"])
         return data["id"]
-
-
-def millis_to_hour_minute(ms: int) -> tuple[int, int]:
-    total_minutes = (ms // 1000) // 60
-    hour = (total_minutes // 60) % 24
-    minute = total_minutes % 60
-    return hour, minute
-
-
-def filter_minute_data(data, start: datetime, end: datetime):
-    return filter(lambda entry: start <= entry[0] <= end, data)
-
-
-def get_ohclv_from_zip_file(filename: str):
-    lean_data_folder = "/home/bena/Workspace/Synced/algotrading/data"
-    file = lean_data_folder + filename.strip()
-    print(file)
-
-    with zipfile.ZipFile(file, "r") as zip_ref:
-        # Find all .txt files
-        txt_files = [name for name in zip_ref.namelist() if name.endswith(".csv")]
-        if len(txt_files) != 1:
-            raise ValueError(f"Expected exactly 1 .txt file, found {len(txt_files)}.")
-
-        txt_filename = txt_files[0]
-        with zip_ref.open(txt_filename) as file:
-            wrapper = TextIOWrapper(file, encoding="utf-8")
-            reader = csv.reader(wrapper)
-            data = [row for row in reader]
-
-    date_pattern = re.compile(r"^/crypto/binance/minute/ethusdt/(\d+)_trade\.zip$")
-    match = date_pattern.match(filename)
-    if match:
-        date_obj = datetime.strptime(match.group(1), "%Y%m%d")
-
-        for entry in data:
-            hour, minute = millis_to_hour_minute(int(entry[0]))
-            entry[0] = datetime(
-                year=date_obj.year,
-                month=date_obj.month,
-                day=date_obj.day,
-                hour=hour,
-                minute=minute,
-            )
-        return data

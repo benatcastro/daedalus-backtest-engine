@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from config import settings
 
 # Use the BACKTEST_DATABASE_URL from settings
-engine = create_engine(settings.BACKTEST_DATABASE_URL, echo=settings.DEBUG)
+engine = create_engine(settings.BACKTEST_DATABASE_URL, echo=False)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 

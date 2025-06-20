@@ -1,5 +1,8 @@
+import time
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from datetime import datetime
+from schemas.backtest import OrderRead
+from sqlalchemy import and_
 
 # from backtest.lean.LeanBacktestSaver import *
 from database import get_db
@@ -14,6 +17,8 @@ from backtest.DataHandlerFactory import DataHandlerFactory
 from backtest.Exceptions import (
     BacktestDataException,
 )
+from logger import logger
+from models import Order
 
 router = APIRouter(prefix="/backtest")
 
@@ -65,6 +70,46 @@ async def get_candles(
         raise HTTPException(status_code=400, detail={"message": e.message} | e.details)
 
 
+@router.get("/{backtest_id}/orders", response_model=List[OrderRead])
+async def get_backtest_orders(
+    backtest_id: int, start: int, end: int, db: Session = Depends(get_db)
+):
+    """
+    Get orders for a specific backtest within a time range.
+
+    Parameters:
+    - backtest_id: ID of the backtest
+    - start: Start timestamp (Unix epoch)
+    - end: End timestamp (Unix epoch)
+    - symbol: Optional trading symbol to filter orders
+    """
+    # Verify the backtest exists
+    backtest = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+    if not backtest:
+        raise HTTPException(
+            status_code=404, detail=f"Backtest with ID {backtest_id} not found"
+        )
+
+    # Convert timestamps to datetime
+    start_date = datetime.fromtimestamp(start)
+    end_date = datetime.fromtimestamp(end)
+
+    # Build the query
+    query = db.query(Order).filter(
+        and_(
+            Order.backtest_id == backtest_id,
+            Order.time >= start_date,
+            Order.time <= end_date,
+        )
+    )
+
+    # Execute query and return orders
+    orders = query.all()
+
+    # Return the orders
+    return orders
+
+
 # Upload a new backtest for a strategy
 @router.post("/", response_model=BacktestRead)
 async def upload_backtest(
@@ -75,17 +120,13 @@ async def upload_backtest(
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
 ):
-    print(f"Name: {name}")
-    print(f"Description: {description}")
-    print(f"Engine: {engine}")
-    print(f"Strategy ID: {strategy_id}")
-
     """
     try:
         engine_enum = BacktestEngine(engine)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid engine: {engine}")
     """
+    start_time_processing = time.time()
 
     saver: BacktestSaver = BacktestSaverFactory.create(
         engine, name=name, description=description, strategy_id=strategy_id, files=files
@@ -93,7 +134,7 @@ async def upload_backtest(
 
     await saver.process()
 
-    # Step 1: Validate data using Pydantic schema
+    # Validate data using Pydantic schema
     backtest_data = BacktestCreate(
         name=saver.name,
         description=saver.description,
@@ -103,20 +144,39 @@ async def upload_backtest(
         strategy_id=saver.strategy_id,
         parameters=saver.parameters,
     )
-    print(f"Validated BacktestCreate: {backtest_data}")
 
-    # Step 2: Create SQLAlchemy model instance from validated data
+    # Create SQLAlchemy model instance from validated data
     new_backtest = Backtest(**backtest_data.model_dump())
 
     # Add to the session
     db.add(new_backtest)
     db.commit()
     db.refresh(new_backtest)
+    processing_time = time.time() - start_time_processing
+    logger.info(f"Saved backtest: {new_backtest.name} in {processing_time:.2f} seconds")
+
+    start_time_processing = time.time()
+
+    # Convert pydantic schemas to ORM models
+    orm_orders = []
+    for order in saver.orders:
+        order_dict = order.model_dump()
+        order_dict["backtest_id"] = new_backtest.id
+        orm_order = Order(**order_dict)
+        orm_orders.append(orm_order)
+
+    # Save the orders
+    db.add_all(orm_orders)
+    db.commit()
+
+    processing_time = time.time() - start_time_processing
+    logger.info(f"Saved {len(orm_orders)} orders in {processing_time:.2f} seconds")
+
     return new_backtest
 
 
-# Retrieve all backtests of a strategy
-@router.get("/backtest/{backtest_id}", response_model=BacktestRead)
+# Retrieve one backtests of a strategy
+@router.get("/details/{backtest_id}", response_model=BacktestRead)
 async def get_one_backtest(backtest_id: int, db: Session = Depends(get_db)):
     backtests = db.query(Backtest).filter(Backtest.id == backtest_id).first()
     return backtests
