@@ -14,12 +14,12 @@ from config import settings
 from logger import logger
 from datetime import datetime
 from models import Backtest
-from backtest_handler.Candle import Candle
+from backtest.Candle import Candle
 from typing import List, Optional, Dict
-from backtest_handler.DataHandler import DataHandler
+from backtest.DataHandler import DataHandler
 from schemas.LeanBacktest import LeanBacktest, DataRequest
-from backtest_handler.lean.LeanExceptions import UnexpectedZipContentError
-from backtest_handler.Exceptions import (
+from backtest.lean.LeanExceptions import UnexpectedZipContentError
+from backtest.Exceptions import (
     CandlestickDataNotAvailableException,
     SymbolNotAvailableException,
     ResolutionNotAvailableException,

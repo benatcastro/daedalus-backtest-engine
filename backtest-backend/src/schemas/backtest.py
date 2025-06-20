@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from enum import Enum
 
 
@@ -18,12 +18,10 @@ class BacktestCreate(BaseModel):
     engine: StrategyEngine
     parameters: Dict
 
-    class Config:
-        orm_mode = True  # Include this to work well with FastAPI/SQLAlchemy
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BacktestRead(BacktestCreate):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

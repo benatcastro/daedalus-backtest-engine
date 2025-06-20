@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, Enum, JSON, String, Text, DateTime
 
 from database import Base
 from datetime import datetime, timezone
-from backtest_handler.BacktestEngine import BacktestEngine
+from backtest.BacktestEngine import BacktestEngine
 
 
 class Backtest(Base):
