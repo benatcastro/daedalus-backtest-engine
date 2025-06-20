@@ -11,7 +11,7 @@ interface bufferData<T extends TimeBasedData> {
 
 export class DataFeed<T extends TimeBasedData> {
   private _viewRange!: IRange<Time>;
-  private readonly _fetchData: (range: IRange<Time>) => Promise<T[]>;
+  private readonly _fetchData: (range: IRange<Time>) => T[];
   private readonly _data: bufferData<T>;
   private readonly _dataBounds: IRange<Time>;
   private _onDataUpdateCallback: ((data: T[]) => void) | null = null;
@@ -21,10 +21,11 @@ export class DataFeed<T extends TimeBasedData> {
   private _updateTimeout: NodeJS.Timeout | null = null;
   private _initialDataLoaded: boolean = false;
   private readonly CHUNK_SIZE = 30000;
+  private readonly MARGIN = 15000;
   private readonly INITIAL_CHUNKS = 1;
 
   constructor(
-    dataFetcher: (range: IRange<Time>) => Promise<T[]>,
+    dataFetcher: (range: IRange<Time>) => T[],
     maxDataRange: IRange<Time>,
   ) {
     this._fetchData = dataFetcher;
@@ -90,7 +91,7 @@ export class DataFeed<T extends TimeBasedData> {
     this._data.data = [...this._data.data, ...filteredNewData];
     this._data.range.to = this._data.data[this._data.data.length - 1].time;
 
-    // Trim data if it gets too large (keep last 2 chunks worth of data)
+    // Trim data if it gets too large
     this.trimDataToChunkLimit();
 
     // Notify that new data was appended (not replaced)
@@ -105,19 +106,13 @@ export class DataFeed<T extends TimeBasedData> {
     const maxChunks = 2;
     const maxDataPoints = this.CHUNK_SIZE * maxChunks;
 
-    if (this._data.data.length > maxDataPoints) {
-      // Keep the most recent data points
-      const trimAmount = this._data.data.length - maxDataPoints;
-      this._data.data = this._data.data.slice(trimAmount);
+    // Check to trim left
+    const extraDataRange = (this._viewRange.from as number) - (this._data.range.from as number)
+    console.log("Extra Data Range: ", extraDataRange)
+    if (extraDataRange > this.MARGIN) {
+      console.log("Trimming data from: ", this.data.data.length)
 
-      // Update the range
-      if (this._data.data.length > 0) {
-        this._data.range.from = this._data.data[0].time;
-      }
 
-      console.log(
-        `Trimmed ${trimAmount} data points. Remaining: ${this._data.data.length}`,
-      );
     }
   }
 
@@ -158,8 +153,6 @@ export class DataFeed<T extends TimeBasedData> {
     this._isLoading = true;
 
     try {
-      let margin = 15000;
-      console.log("Start Data Length: ", this._data.data.length);
 
       if (this._data.data.length === 0) {
         await this.getInitialData();
@@ -169,7 +162,6 @@ export class DataFeed<T extends TimeBasedData> {
       // Check if we need to load data to the right
       const rightDiff =
         (this._data.range.to as number) - (this._viewRange.to as number);
-      console.log("Diff to the right: ", rightDiff);
 
       // Check if we're already at the right boundary
       if ((this._data.range.to as number) >= (this._dataBounds.to as number)) {
@@ -177,8 +169,7 @@ export class DataFeed<T extends TimeBasedData> {
         return;
       }
 
-      if (rightDiff < margin) {
-        console.log("Loading ONE chunk to the right");
+      if (rightDiff < this.MARGIN) {
         const newData = await this._fetchData({
           from: this.data.range.to,
           to: Math.min(
@@ -205,22 +196,12 @@ export class DataFeed<T extends TimeBasedData> {
 
         if (filteredData.length > 0) {
           this.appendData(filteredData);
-          console.log(
-            "AFTER Diff to the right: ",
-            (this._data.range.to as number) - (this._viewRange.to as number),
-          );
         } else {
           console.log("No new data to append after filtering duplicates");
         }
-      }
 
-      // TODO: Implement left side loading when needed
-      /*
-            const leftDiff = (this._viewRange.from as number) - (this._data.range.from as number)
-            if (leftDiff < margin) {
-                // Load data to the left
-            }
-            */
+
+      }
     } finally {
       this._isLoading = false;
     }

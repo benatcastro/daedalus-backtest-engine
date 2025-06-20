@@ -3,16 +3,21 @@ import { Separator } from "@/components/ui/separator";
 import { Strategy } from "@prisma/client";
 import Backtest from "@/types/backtest";
 import { Button } from "@/components/ui/button";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { backtestDatesToRange } from "@/utils/sample-data-generator";
 import Chart from "@/components/chart/chart";
 import { Series } from "@/components/chart/series";
 import { useDataFeed } from "@/hooks/use-data-feed";
+import { Marker } from "../chart/marker";
 
 interface BacktestVisualizationProps {
   strategy: Strategy;
   backtest: Backtest;
 }
+
+import { Order } from "@/types/order";
+import { CandlestickData, IRange, SeriesMarker, Time } from "lightweight-charts";
+import Backtest from "@/types/backtest";
 
 export function BacktestVisualization({
   strategy,
@@ -29,9 +34,84 @@ export function BacktestVisualization({
       backtest,
       dateRange: dateRange,
     };
-  }, [strategy.id, backtest.id]);
+  }, [strategy, backtest]);
+
+
+  const orderFetcher = useCallback(
+    async (range: IRange<Time>) => {
+      if (!backtest) return;
+
+      // Create the query params
+      const queryParams = new URLSearchParams({
+        start: range.from.toString(),
+        end: range.to.toString(),
+      });
+
+      const toSeriesMarker = (order: Order): SeriesMarker<Time> => ({
+        time: (new Date(order.time).getTime() / 1000) as Time,
+        position: order.side === "sell" ? 'aboveBar' : 'belowBar',
+        color: order.side === "sell" ? '#e91e63' : '#2196F3',
+        shape: order.side === "sell" ? 'arrowDown' : 'arrowUp',
+        text: order.side === "sell" ? 'Sell' : 'Buy',
+      });
+
+      // Form the endpoint
+      const endpoint = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/${backtest.id}/orders?${queryParams.toString()}`;
+      // Do the fetch
+      const response = await fetch(endpoint)
+      const data: Order[] = await response.json()
+      const markers: SeriesMarker<Time>[] = data.map(toSeriesMarker)
+      console.log(`Fetched markers (${range.from} -> ${range.to}): `, markers)
+      return markers
+    },
+    [backtest],
+  );
+
+  const candlesticFetcher = useCallback(
+    async (range: IRange<Time>) => {
+      if (!backtest) return;
+
+      // Create the query params
+      const queryParams = new URLSearchParams({
+        symbol: "ethusdt",
+        start: range.from.toString(),
+        end: range.to.toString(),
+      });
+      interface Entry {
+        timestamp: string,
+        open: number,
+        high: number,
+        low: number,
+        close: number,
+        volume: number
+      }
+
+      const toCandleStickData = ({ timestamp, open, high, low, close, volume }: Entry): CandlestickData => ({
+        time: (new Date(timestamp).getTime() / 1000) as Time,
+        open,
+        high,
+        low,
+        close,
+      });
+
+      // Form the endpoint
+      const endpoint = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/${backtest.id}/candles?${queryParams.toString()}`;
+
+      // Do the fetch
+      const response = await fetch(endpoint)
+      const data: Entry[] = await response.json()
+      const candles: CandlestickData[] = data.map(toCandleStickData)
+      return candles
+    },
+    [backtest],
+  );
+
+
   const [candlesticDataFeed, isCandleStickDataFeedLoading] =
-    useDataFeed(backtest);
+    useDataFeed<CandlestickData>(backtest, candlesticFetcher);
+
+  const [orderDataFeed, isOrderDataFeedLoading] =
+    useDataFeed<SeriesMarker<Time>>(backtest, orderFetcher);
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -79,10 +159,15 @@ export function BacktestVisualization({
           {/* Chart Navigation */}
           <div className="flex-1 bg-background p-4 min-h-0">
             <Chart>
-              {candlesticDataFeed ? (
-                <Series type="candlestick" dataFeed={candlesticDataFeed} />
+              {candlesticDataFeed && orderDataFeed? (
+                <Series type="candlestick" dataFeed={candlesticDataFeed}>
+                  <Marker
+                  type="order"
+                  dataFeed={orderDataFeed}
+                  />
+                </Series>
               ) : (
-                <h1>Candlestick DataFeed is loading</h1>
+                <h1>Loading candlestick series</h1>
               )}
             </Chart>
           </div>

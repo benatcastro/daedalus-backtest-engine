@@ -17,14 +17,13 @@ export default function Page({ params }: Props) {
   const { id: backtestId } = useParams();
   const searchParams = useSearchParams();
   const selectedTab = searchParams.get(TAB_PARAM) || DEFAULT_TAB;
-  const strategyId = searchParams.get("strategy");
 
   // Fetch backtests
   const {
     data: backtest,
     error: backtestError,
     isLoading: isBacktestLoading,
-  } = useSWR<Backtest>(`/api/v1/backtest/backtest/${backtestId}`);
+  } = useSWR<Backtest>(`/api/v1/backtest/details/${backtestId}`);
 
   // Fetch strategy
   const {
