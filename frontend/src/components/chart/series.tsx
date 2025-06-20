@@ -19,7 +19,7 @@ import {
   AreaSeries,
 } from "lightweight-charts";
 import { ChartContext } from "./chart";
-import { DataFeed } from "@/lib/data-feed";
+import { DataFeed, TimeBasedData } from "@/lib/data-feed";
 
 // Type definitions for your trading data
 type SeriesType = "candlestick" | "line" | "area";
@@ -39,7 +39,14 @@ type SeriesOptions<T extends SeriesType> = T extends "candlestick"
     : T extends "area"
       ? DeepPartial<AreaSeriesPartialOptions>
       : never;
-
+interface ISeriesContext {
+  _childrenDataFeed: DataFeed<any>[]
+  _api: ISeriesApi<any>
+  _dataFeed?: DataFeed<TimeBasedData>;
+  addChildrenDataFeed(dataFeed: DataFeed<any>): void;
+  api(): ISeriesApi<any>;
+  free(): void;
+}
 interface SeriesProps<T extends SeriesType> {
   type: T;
   data?: SeriesData<T>;
@@ -48,11 +55,7 @@ interface SeriesProps<T extends SeriesType> {
   dataFeed?: DataFeed<any>;
 }
 
-const SeriesContext = React.createContext<{
-  _dataFeed?: DataFeed<any>;
-  api(): ISeriesApi<any>;
-  free(): void;
-} | null>(null);
+export const SeriesContext = React.createContext<ISeriesContext | null>(null);
 
 export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
   (props, ref) => {
@@ -60,6 +63,7 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
 
     // Each series manages its own API reference
     const context = useRef({
+      _childrenDataFeeds: [] as DataFeed<any>[],
       _api: null as ISeriesApi<any> | null,
       _dataFeed: null as DataFeed<any> | null,
 
@@ -93,6 +97,7 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
               this._api = parent
                 .api()
                 .addSeries(AreaSeries, { ...options, ...rest });
+
               break;
             default:
               throw new Error(
@@ -130,6 +135,13 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
         return this._api;
       },
 
+      addChildrenDataFeed(dataFeed: DataFeed<any>) {
+        if (!this._childrenDataFeeds) {
+          this._childrenDataFeeds = []
+        }
+        this._childrenDataFeeds.push(dataFeed)
+      },
+
       // Cleanup function - removes series from chart
       free() {
         if (!parent) {
@@ -139,6 +151,13 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
         if (this._api) {
           if (this._dataFeed) {
             parent.removeDataFeed(this._dataFeed);
+          }
+
+          if (this._childrenDataFeeds) {
+            this._childrenDataFeeds.forEach((dataFeed: DataFeed<any>) => {
+              console.log("Removing children datafeed")
+              parent.removeDataFeed(dataFeed)
+            })
           }
 
           // Check that the chart has not been removed before deleting the series from the chart

@@ -26,6 +26,8 @@ interface ChartContainerProps extends DeepPartial<ChartOptions> {
   children?: ReactNode;
   width?: number;
   height?: number;
+  startTime?: Time;
+  endTime?: Time;
 }
 
 /*
@@ -153,7 +155,6 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
             "Removed datafeed from the list, currently have %d",
             chartApiRef.current._dataFeeds.length,
           );
-          console.log("DataFeeds: ", chartApiRef.current._dataFeeds);
 
           // If no more DataFeeds, unsubscribe from time range events
           if (chartApiRef.current._dataFeeds.length === 0) {
@@ -175,18 +176,18 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
       timeRangeChangeEventHandler(timeRange) {
         if (!timeRange || !this._dataFeeds) return;
 
-        // Obtain the real change in the chart
-        this._dataFeeds.forEach((dataFeed) => {
-          // Dont let the chart update the view range while the datafeed is loading
-          if (!dataFeed.isLoading) {
+          if (!this._dataFeeds[0].isLoading) {
             this._lastNotLoadingViewRange = timeRange;
           }
 
-          if (dataFeed.isLoading && this._lastNotLoadingViewRange) {
+          if (this._dataFeeds[0] && this._lastNotLoadingViewRange) {
             this.api()
               .timeScale()
               .setVisibleRange(this._lastNotLoadingViewRange);
           }
+        // Obtain the real change in the chart
+        this._dataFeeds.forEach((dataFeed) => {
+          // Dont let the chart update the view range while the datafeed is loading
 
           // Update the datafeeds timerange
           if (!dataFeed.isLoading) {
@@ -243,6 +244,7 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
     // Update the event handler when a new dataFeed is added
     useEffect(() => {
       console.log("DataFeeds: ", chartApiRef.current._dataFeeds);
+
       if (chartApiRef.current._dataFeeds.length) {
         // Remove the previous one
         const chart = chartApiRef.current.api();
@@ -256,7 +258,6 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
 
           // Obtain the real change in the chart
           chartApiRef.current._dataFeeds.forEach((dataFeed) => {
-            console.log("Updating data Feeds");
             // Dont let the chart update the view range while the datafeed is loading
             if (!dataFeed.isLoading) {
               chartApiRef.current._lastNotLoadingViewRange = timeRange;

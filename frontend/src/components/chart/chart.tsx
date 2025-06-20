@@ -1,3 +1,4 @@
+'use client'
 import { useCallback, useState, createContext, ReactNode } from "react";
 import { ChartContainer } from "./chart-container";
 import {
