@@ -2,9 +2,10 @@
 from AlgorithmImports import *
 # endregion
 
+
 class Cienes(QCAlgorithm):
     MAX_TRADE_COUNT = 12
-    STARTING_BUY_SIZE = 0.1 # Percentage of cash
+    STARTING_BUY_SIZE = 0.1  # Percentage of cash
     SL_PIPS = 1000
     TP_PIPS = 10000
 
@@ -27,11 +28,8 @@ class Cienes(QCAlgorithm):
         self.sl_price = None
         self.tp_ticket = None
 
-
-
-
     def update_buy_size(self):
-        if (self.trade_count < Cienes.MAX_TRADE_COUNT):
+        if self.trade_count < Cienes.MAX_TRADE_COUNT:
             self.buy_size += self.trade_count / 100
         else:
             self.buy_size = Cienes.STARTING_BUY_SIZE
@@ -43,8 +41,10 @@ class Cienes(QCAlgorithm):
         :param price: The current price of the asset
         :return: Estimated pip size
         """
-        decimal_places = str(price)[::-1].find('.')
-        pip_size = 10 ** -decimal_places if decimal_places != -1 else 1  # Default to 1 if no decimal
+        decimal_places = str(price)[::-1].find(".")
+        pip_size = (
+            10**-decimal_places if decimal_places != -1 else 1
+        )  # Default to 1 if no decimal
         self.debug(f"Pip Size wtih price {price} is: {pip_size}")
         return 0.01
 
@@ -59,11 +59,17 @@ class Cienes(QCAlgorithm):
         position_price = cash * percentage * 0.001
         return position_price
 
-    def get_position_size_by_porcentage(self, percentage: float, cash: float, symbol_price: float):
+    def get_position_size_by_porcentage(
+        self, percentage: float, cash: float, symbol_price: float
+    ):
         spendable_cash = self.get_position_price_by_percentage(percentage, cash)
         position_size = spendable_cash / symbol_price
-        self.debug(f"Se calcula el tamano de la posicion con el {percentage}% del total ({cash})")
-        self.debug(f"Resultado: {position_size} unidades de ETH a precio: {symbol_price} con valor de : {spendable_cash}")
+        self.debug(
+            f"Se calcula el tamano de la posicion con el {percentage}% del total ({cash})"
+        )
+        self.debug(
+            f"Resultado: {position_size} unidades de ETH a precio: {symbol_price} con valor de : {spendable_cash}"
+        )
         return position_size
 
     def check_stop_loss(self):
@@ -74,7 +80,9 @@ class Cienes(QCAlgorithm):
             if holding.is_long:
                 if price <= self.sl_price:
                     self.debug("*******************************")
-                    self.debug(f"Stop loss triggered (long) price {price} stop loss: {self.sl_price}")
+                    self.debug(
+                        f"Stop loss triggered (long) price {price} stop loss: {self.sl_price}"
+                    )
                     self.debug("*******************************")
                     self.liquidate(self.eth.symbol)
                     self.sl_price = None
@@ -83,62 +91,84 @@ class Cienes(QCAlgorithm):
             else:
                 if price >= self.sl_price:
                     self.debug("*******************************")
-                    self.debug(f"Stop loss triggered (short) price {price} stop loss: {self.sl_price}")
+                    self.debug(
+                        f"Stop loss triggered (short) price {price} stop loss: {self.sl_price}"
+                    )
                     self.debug("*******************************")
                     self.liquidate(self.eth.symbol)
                     self.sl_price = None
                     self.order_ticket = None
                     self.tp_ticket = None
 
-
-
     def on_data(self, data: Slice):
         """on_data event is the primary entry point for your algorithm. Each new data point will be pumped in here.
-            Arguments:
-                data: Slice object keyed by symbol containing the stock data
+        Arguments:
+            data: Slice object keyed by symbol containing the stock data
         """
 
         price = self.eth.open
         rounded_price = round(price, 0)
-        self.debug(f'[{data.time}] Precio redondeado: {rounded_price} O: {self.eth.open} H: {self.eth.high} C: {self.eth.close} L: {self.eth.low} V: {self.eth.volume}')
+        self.debug(
+            f"[{data.time}] Precio redondeado: {rounded_price} O: {self.eth.open} H: {self.eth.high} C: {self.eth.close} L: {self.eth.low} V: {self.eth.volume}"
+        )
         self.check_stop_loss()
 
         if self.previous_price is None:
             self.previous_price = price
             return
 
-        #self.debug(f"Inversiones activas: {self.portfolio.invested}")
+        # self.debug(f"Inversiones activas: {self.portfolio.invested}")
         if round(rounded_price, 0) % 100 == 0:
-            #self.debug(f'El precio redondeado {rounded_price} es modulo de 100')
+            # self.debug(f'El precio redondeado {rounded_price} es modulo de 100')
             if not self.portfolio.invested:
                 self.debug("No hay inversiones activas, se abre una operacion")
                 self.update_buy_size()
-                position_size = self.get_position_size_by_porcentage(self.buy_size, self.portfolio.cash, price)
-                position_price = self.get_position_price_by_percentage(self.buy_size, self.portfolio.cash)
+                position_size = self.get_position_size_by_porcentage(
+                    self.buy_size, self.portfolio.cash, price
+                )
+                position_price = self.get_position_price_by_percentage(
+                    self.buy_size, self.portfolio.cash
+                )
                 if self.previous_price < price:
-                    self.debug(f"El precio previo ({self.previous_price}) es menor que el actual ({price}) la direccion es LONG")
+                    self.debug(
+                        f"El precio previo ({self.previous_price}) es menor que el actual ({price}) la direccion es LONG"
+                    )
                     # Uptrend, long trade
                     stop_loss_price = price - (Cienes.SL_PIPS * 0.01)
                     take_profit_price = price + (Cienes.TP_PIPS * 0.01)
-                    self.order_ticket = self.market_order(self.eth.symbol, position_size)
-                    self.tp_ticket = self.limit_order(self.eth.symbol, -position_size, take_profit_price)
+                    self.order_ticket = self.market_order(
+                        self.eth.symbol, position_size
+                    )
+                    self.tp_ticket = self.limit_order(
+                        self.eth.symbol, -position_size, take_profit_price
+                    )
                     self.sl_price = stop_loss_price
-                    self.debug(f"LONG Trade: {position_price}$ Price: {price} SL: {stop_loss_price} TP: {take_profit_price}")
+                    self.debug(
+                        f"LONG Trade: {position_price}$ Price: {price} SL: {stop_loss_price} TP: {take_profit_price}"
+                    )
                 else:
-                    self.debug(f"El precio previo ({self.previous_price}) es mayor que el actual ({price}) la direccion es SHORT")
+                    self.debug(
+                        f"El precio previo ({self.previous_price}) es mayor que el actual ({price}) la direccion es SHORT"
+                    )
                     # Downtrend short trade
                     stop_loss_price = price + (Cienes.SL_PIPS * 0.01)
                     take_profit_price = price - (Cienes.TP_PIPS * 0.01)
-                    self.order_ticket = self.market_order(self.eth.symbol, -position_size)
-                    self.tp_ticket = self.limit_order(self.eth.symbol, position_size, take_profit_price)
+                    self.order_ticket = self.market_order(
+                        self.eth.symbol, -position_size
+                    )
+                    self.tp_ticket = self.limit_order(
+                        self.eth.symbol, position_size, take_profit_price
+                    )
                     self.sl_price = stop_loss_price
-                    self.debug(f"SHORT Trade: {position_price}$ Price: {price} SL: {stop_loss_price} TP: {take_profit_price}")
+                    self.debug(
+                        f"SHORT Trade: {position_price}$ Price: {price} SL: {stop_loss_price} TP: {take_profit_price}"
+                    )
             else:
                 self.debug("Ya existen inversiones activas, no se hace nada")
 
         # Update previous price
         self.previous_price = price
-        #self.debug("******************************************************************")
+        # self.debug("******************************************************************")
 
     def on_order_event(self, order_event: OrderEvent):
         order: Order = self.transactions.get_order_by_id(order_event.order_id)
@@ -161,5 +191,3 @@ class Cienes(QCAlgorithm):
         #     self.debug(f"Order: {order_event.order_id} has been closed")
         #     self.debug("**********************************")
         self.debug("----------------------------------")
-
-

@@ -8,9 +8,9 @@ and extensibility.
 
 from typing import Dict, Type
 from models import Backtest
-from backtest_handler.BacktestEngine import BacktestEngine
-from backtest_handler.DataHandler import DataHandler
-from backtest_handler.lean.LeanDataHandler import LeanDataHandler
+from backtest.BacktestEngine import BacktestEngine
+from backtest.DataHandler import DataHandler
+from backtest.lean.LeanDataHandler import LeanDataHandler
 
 
 class DataHandlerFactory:

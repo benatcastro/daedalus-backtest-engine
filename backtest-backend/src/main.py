@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import backtest
+from backtest.router import router as backtest_router
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 from config import settings
@@ -15,7 +15,7 @@ app = FastAPI(
 )
 
 # Include routers with API version prefix
-app.include_router(backtest.router, prefix=settings.API_V1_STR)
+app.include_router(backtest_router, prefix=settings.API_V1_STR)
 
 # Configure CORS
 app.add_middleware(

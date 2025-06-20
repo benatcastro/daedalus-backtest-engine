@@ -9,7 +9,7 @@ data formats and provides a unified API.
 from typing import List, Optional, Dict
 from datetime import datetime
 from abc import ABC, abstractmethod
-from backtest_handler.Candle import Candle
+from backtest.Candle import Candle
 
 
 class DataHandler(ABC):

@@ -10,6 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Find the top-level .env file by going up one directory
 ROOT_DIR = Path(__file__).parent.parent
 ENV_FILE = ROOT_DIR / ".env"
+ENV_FILE = "/home/bena/Projects/daedalus/.env"
 print(f"Loading settings from {ENV_FILE}")
 
 
