@@ -3,11 +3,15 @@ import { Separator } from "@/components/ui/separator";
 import { Strategy } from "@prisma/client";
 import Backtest from "@/types/backtest";
 import { Button } from "@/components/ui/button";
-import { useCallback, useMemo } from "react";
+import { useContext, useEffect, useCallback, useMemo } from "react";
 import { calculateOptimalInitialViewRange } from "@/lib/data-utils";
 import Chart from "@/components/chart/chart";
 import { Series } from "@/components/chart/series";
 import { useDataFeed } from "@/hooks/use-data-feed";
+import { MousePointer, TrendingUp, Square, Type, ArrowUpRight } from "lucide-react";
+import { BacktestSidebarItem } from "@/components/backtest/backtest-sidebar";
+import { useBacktestContext } from "@/contexts/backtest-context";
+
 import { Marker } from "../chart/marker";
 
 interface BacktestVisualizationProps {
@@ -159,47 +163,54 @@ export function BacktestVisualization({ strategy, backtest }: BacktestVisualizat
         { chunk_size: 40, max_chunk_attempts: 1, fetch_attempt_time: 5000 },
     );
 
-    return (
-        <div className="h-full flex flex-col bg-background">
-            {/* Header: Backtest Name, Controls, Mobile Menu */}
-            <div className="border-b bg-background p-4 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div>
-                            <h1 className="text-xl font-bold">
-                                {strategy.name} - {backtest.name}
-                            </h1>
-                            <p className="text-xs text-muted-foreground">
-                                Backtest ID: {backtest.id} |{" "}
-                                {backtestInfo.dateRange.from.toLocaleDateString()} -{" "}
-                                {backtestInfo.dateRange.to.toLocaleDateString()}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  const backtestContext = useBacktestContext()
+
+  const drawingTools: BacktestSidebarItem[] = useMemo(() => {
+    return [
+      {
+        id: "select",
+        name: "Select Tool",
+        description: "Select and move objects on the chart",
+        icon: <MousePointer size={24} />
+      },
+      {
+        id: "line",
+        name: "Line Tool",
+        description: "Draw trend lines and support/resistance levels",
+        icon: <TrendingUp size={24} />
+      },
+      {
+        id: "rectangle",
+        name: "Rectangle Tool",
+        description: "Draw rectangular zones to highlight price ranges",
+        icon: <Square size={24} />
+      },
+      {
+        id: "text",
+        name: "Text Tool",
+        description: "Add text annotations to the chart",
+        icon: <Type size={24} />
+      },
+      {
+        id: "arrow",
+        name: "Arrow Tool",
+        description: "Draw directional arrows to mark price movements",
+        icon: <ArrowUpRight size={24} />
+      }
+  ]}, []);
+
+  useEffect(() => {
+    backtestContext.setSidebarItems(drawingTools)
+    return () => {
+      backtestContext.setSidebarItems([])
+    }
+  }, [drawingTools])
+
+  return (
+    <div className="h-full flex flex-col bg-background">
 
             {/* Main Content Area */}
             <div className="flex overflow-hidden flex-1">
-                {/* Left Toolbar */}
-                <div className="w-16 border-r bg-muted/30 flex flex-col items-center py-4 gap-2">
-                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
-                        Tool
-                    </div>
-                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
-                        Line
-                    </div>
-                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
-                        Rect
-                    </div>
-                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
-                        Text
-                    </div>
-                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs">
-                        Arrow
-                    </div>
-                </div>
-
                 {/* Main Chart Area */}
                 <div className="flex-1 flex flex-col min-h-0">
                     {/* Chart Navigation */}
