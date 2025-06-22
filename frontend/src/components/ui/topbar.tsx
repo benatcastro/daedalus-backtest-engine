@@ -11,13 +11,13 @@ import { useState } from "react";
 import { Strategy } from "@prisma/client";
 import Backtest from "@/types/backtest";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { SlashIcon } from "lucide-react";
 
 const navItems = [
@@ -27,35 +27,35 @@ const navItems = [
 ];
 
 export function TopBar() {
-  const pathname = usePathname();
-  const { data: session } = useSession();
-  const {strategy, backtest}= useAppContext()
+    const pathname = usePathname();
+    const { data: session } = useSession();
+    const { strategy, backtest } = useAppContext();
 
-  return (
-    <header className="w-full border-border bg-muted/30 h-16">
-      <div className="h-full flex items-center justify-between px-4">
-        <div className="flex items-center gap-6">
-          <Link href="/">
-            <span className="font-bold text-xl cursor-pointer">QuanticView</span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-4">
-            {strategy && backtest ?
-              <Breadcrumb>
-                <BreadcrumbList>
-                 <BreadcrumbItem>
-                    <BreadcrumbLink href={`/strategy/${strategy.id}`}>{strategy.name}</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator>
-                    <SlashIcon />
-                  </BreadcrumbSeparator>
-                  <BreadcrumbPage>{backtest.name}</BreadcrumbPage>
-                </BreadcrumbList>
-              </Breadcrumb>
-            :
-              null
-            }
-          </nav>
-        </div>
+    return (
+        <header className="w-full border-border bg-muted/30 h-16">
+            <div className="h-full flex items-center justify-between px-4">
+                <div className="flex items-center gap-6">
+                    <Link href="/">
+                        <span className="font-bold text-xl cursor-pointer">QuanticView</span>
+                    </Link>
+                    <nav className="hidden md:flex items-center gap-4">
+                        {strategy && backtest ? (
+                            <Breadcrumb>
+                                <BreadcrumbList>
+                                    <BreadcrumbItem>
+                                        <BreadcrumbLink href={`/strategy/${strategy.id}`}>
+                                            {strategy.name}
+                                        </BreadcrumbLink>
+                                    </BreadcrumbItem>
+                                    <BreadcrumbSeparator>
+                                        <SlashIcon />
+                                    </BreadcrumbSeparator>
+                                    <BreadcrumbPage>{backtest.name}</BreadcrumbPage>
+                                </BreadcrumbList>
+                            </Breadcrumb>
+                        ) : null}
+                    </nav>
+                </div>
 
                 <div className="flex items-center gap-2">
                     {session?.user ? (

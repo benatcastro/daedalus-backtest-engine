@@ -11,7 +11,6 @@ import { useDataFeed } from "@/hooks/use-data-feed";
 import { MousePointer, TrendingUp, Square, Type, ArrowUpRight } from "lucide-react";
 import { BacktestSidebarItem } from "@/components/backtest/backtest-sidebar";
 import { useBacktestContext } from "@/contexts/backtest-context";
-
 import { Marker } from "../chart/marker";
 
 interface BacktestVisualizationProps {
@@ -163,52 +162,57 @@ export function BacktestVisualization({ strategy, backtest }: BacktestVisualizat
         { chunk_size: 40, max_chunk_attempts: 1, fetch_attempt_time: 5000 },
     );
 
-  const backtestContext = useBacktestContext()
+    const backtestContext = useBacktestContext();
 
-  const drawingTools: BacktestSidebarItem[] = useMemo(() => {
-    return [
-      {
-        id: "select",
-        name: "Select Tool",
-        description: "Select and move objects on the chart",
-        icon: <MousePointer size={24} />
-      },
-      {
-        id: "line",
-        name: "Line Tool",
-        description: "Draw trend lines and support/resistance levels",
-        icon: <TrendingUp size={24} />
-      },
-      {
-        id: "rectangle",
-        name: "Rectangle Tool",
-        description: "Draw rectangular zones to highlight price ranges",
-        icon: <Square size={24} />
-      },
-      {
-        id: "text",
-        name: "Text Tool",
-        description: "Add text annotations to the chart",
-        icon: <Type size={24} />
-      },
-      {
-        id: "arrow",
-        name: "Arrow Tool",
-        description: "Draw directional arrows to mark price movements",
-        icon: <ArrowUpRight size={24} />
-      }
-  ]}, []);
+    const drawingTools: BacktestSidebarItem[] = useMemo(() => {
+        return [
+            {
+                id: "select",
+                name: "Select Tool",
+                description: "Select and move objects on the chart",
+                icon: <MousePointer size={24} />,
+                onClick: () => {},
+            },
+            {
+                id: "line",
+                name: "Line Tool",
+                description: "Draw trend lines and support/resistance levels",
+                icon: <TrendingUp size={24} />,
+                onClick: () => {},
+            },
+            {
+                id: "rectangle",
+                name: "Rectangle Tool",
+                description: "Draw rectangular zones to highlight price ranges",
+                icon: <Square size={24} />,
+                onClick: () => {},
+            },
+            {
+                id: "text",
+                name: "Text Tool",
+                description: "Add text annotations to the chart",
+                icon: <Type size={24} />,
+                onClick: () => {},
+            },
+            {
+                id: "arrow",
+                name: "Arrow Tool",
+                description: "Draw directional arrows to mark price movements",
+                icon: <ArrowUpRight size={24} />,
+                onClick: () => {},
+            },
+        ];
+    }, []);
 
-  useEffect(() => {
-    backtestContext.setSidebarItems(drawingTools)
-    return () => {
-      backtestContext.setSidebarItems([])
-    }
-  }, [drawingTools])
+    useEffect(() => {
+        backtestContext.setSidebarItems(drawingTools);
+        return () => {
+            backtestContext.setSidebarItems([]);
+        };
+    }, [drawingTools]);
 
-  return (
-    <div className="h-full flex flex-col bg-background">
-
+    return (
+        <div className="h-full flex flex-col bg-background">
             {/* Main Content Area */}
             <div className="flex overflow-hidden flex-1">
                 {/* Main Chart Area */}
