@@ -441,11 +441,11 @@ export function calculateOptimalInitialViewRange(
   const percentageDurationMs = totalDurationMs * maxPercentage;
   const actualDurationMs = Math.min(percentageDurationMs, maxDurationMs);
 
-  // Start from the beginning of the backtest
-  const startTime = backtestRange.start.getTime();
-  const endTime = Math.min(
-    startTime + actualDurationMs,
-    backtestRange.end.getTime(),
+  // Instead of starting from the beginning, start from the end and go backwards
+  const endTime = backtestRange.end.getTime();
+  const startTime = Math.max(
+    endTime - actualDurationMs,
+    backtestRange.start.getTime(),
   );
 
   return {

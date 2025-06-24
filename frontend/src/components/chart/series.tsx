@@ -4,6 +4,7 @@ import React, {
   useImperativeHandle,
   useRef,
   useContext,
+  useEffect,
 } from "react";
 import {
   ISeriesApi,
@@ -17,9 +18,10 @@ import {
   CandlestickSeries,
   LineSeries,
   AreaSeries,
+  Time,
 } from "lightweight-charts";
-import { ChartContext } from "./chart";
-import { DataFeed, TimeBasedData } from "@/lib/data-feed";
+import { TimeRangeDataFeed as DataFeed, TimeBasedData } from "@/lib/data-feed";
+import { useChartContext } from "@/hooks/useChartContext";
 
 // Type definitions for your trading data
 type SeriesType = "candlestick" | "line" | "area";
@@ -40,10 +42,7 @@ type SeriesOptions<T extends SeriesType> = T extends "candlestick"
       ? DeepPartial<AreaSeriesPartialOptions>
       : never;
 interface ISeriesContext {
-  _childrenDataFeed: DataFeed<any>[]
   _api: ISeriesApi<any>
-  _dataFeed?: DataFeed<TimeBasedData>;
-  addChildrenDataFeed(dataFeed: DataFeed<any>): void;
   api(): ISeriesApi<any>;
   free(): void;
 }
@@ -52,18 +51,31 @@ interface SeriesProps<T extends SeriesType> {
   data?: SeriesData<T>;
   options?: SeriesOptions<T>;
   children?: React.ReactNode;
-  dataFeed?: DataFeed<any>;
+  dataFeed?: DataFeed<any >;
+  main?: boolean
 }
 
 export const SeriesContext = React.createContext<ISeriesContext | null>(null);
 
 export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
   (props, ref) => {
-    const parent = useContext(ChartContext); // Get the chart context from parent ChartContainer
+    const parent = useChartContext(); // Get the chart context from parent ChartContainer
+    const dataFeedRef = useRef<DataFeed<any>>(null)
+    const {
+      children,
+      data,
+      type,
+      dataFeed,
+      main,
+      options = {},
+      ...rest
+    } = props;
+
+    if (dataFeed && !parent.initialRange) {
+    }
 
     // Each series manages its own API reference
     const context = useRef({
-      _childrenDataFeeds: [] as DataFeed<any>[],
       _api: null as ISeriesApi<any> | null,
       _dataFeed: null as DataFeed<any> | null,
 
@@ -72,15 +84,6 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
         console.log("Triying to create Serie");
         if (!this._api && parent) {
           console.log("Creating Serie");
-          const {
-            children,
-            data,
-            type,
-            dataFeed,
-            options = {},
-            ...rest
-          } = props;
-
           // Create the appropriate series type for your trading visualization
           switch (type) {
             case "candlestick":
@@ -110,36 +113,9 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
             this._api.setData(data);
           }
 
-          if (dataFeed) {
-            this._dataFeed = dataFeed;
-            console.log(
-              "ChartContainer: Before push, array length:",
-              parent._dataFeeds.length,
-            );
-            parent.addDataFeed(dataFeed);
-            console.log(
-              "ChartContainer: After push, array length:",
-              parent._dataFeeds.length,
-            );
-
-            // Subscription to data updates
-            dataFeed.subscribeToDataUpdates((data) => {
-              if (this._api) {
-                this._api.setData(data);
-              }
-            });
-          }
-
           console.log(`${type} series created for trading analysis`);
         }
         return this._api;
-      },
-
-      addChildrenDataFeed(dataFeed: DataFeed<any>) {
-        if (!this._childrenDataFeeds) {
-          this._childrenDataFeeds = []
-        }
-        this._childrenDataFeeds.push(dataFeed)
       },
 
       // Cleanup function - removes series from chart
@@ -149,16 +125,6 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
         }
         // Check if parent chart was removed already (prevents errors)
         if (this._api) {
-          if (this._dataFeed) {
-            parent.removeDataFeed(this._dataFeed);
-          }
-
-          if (this._childrenDataFeeds) {
-            this._childrenDataFeeds.forEach((dataFeed: DataFeed<any>) => {
-              console.log("Removing children datafeed")
-              parent.removeDataFeed(dataFeed)
-            })
-          }
 
           // Check that the chart has not been removed before deleting the series from the chart
           if (!parent.isRemoved) {
@@ -180,6 +146,48 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
         currentRef.free();
       };
     }, []); // Empty dependency - runs once on mount
+
+    useEffect(() => {
+      if (!dataFeed) return
+      if (!parent.initialRange) {
+        throw Error("datafeed requieres an initial view range")
+      }
+
+
+      const series = context.current.api()
+      const chart = parent.api()
+
+      // Add datafeed to chart component
+      dataFeedRef.current = dataFeed
+      parent.addDataFeed(dataFeed)
+      if (main === true) {
+        parent.setMainDataFeed(dataFeed)
+      }
+
+
+      // Initialize datafeed data
+      dataFeedRef.current.initialize(parent.initialRange)
+      dataFeed.subscribeToInitialDataLoaded(() => {
+        if (series && chart && parent.initialRange) {
+          series.setData(dataFeed.data.data)
+          chart.timeScale().setVisibleRange(parent.initialRange)
+        }
+      })
+
+
+      dataFeed.subscribeToDataUpdates((data) => {
+        if (series) {
+          console.log("Series: Set data")
+          series.setData(data)
+        }
+      })
+
+      return (() => {
+        parent.removeDataFeed(dataFeed)
+        dataFeed.free()
+      })
+
+    }, [dataFeed])
 
     // Effect 2: Update series options when props change
     useLayoutEffect(() => {
