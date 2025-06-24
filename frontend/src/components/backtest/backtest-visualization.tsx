@@ -4,7 +4,7 @@ import { Strategy } from "@prisma/client";
 import Backtest from "@/types/backtest";
 import { Button } from "@/components/ui/button";
 import { useCallback, useMemo } from "react";
-import { backtestDatesToRange } from "@/utils/sample-data-generator";
+import { backtestDatesToRange, calculateOptimalInitialViewRange } from "@/utils/sample-data-generator";
 import Chart from "@/components/chart/chart";
 import { Series } from "@/components/chart/series";
 import { useDataFeed } from "@/hooks/use-data-feed";
@@ -17,7 +17,6 @@ interface BacktestVisualizationProps {
 
 import { Order } from "@/types/order";
 import { CandlestickData, IRange, SeriesMarker, Time } from "lightweight-charts";
-import Backtest from "@/types/backtest";
 
 export function BacktestVisualization({
   strategy,
@@ -106,6 +105,7 @@ export function BacktestVisualization({
     [backtest],
   );
 
+  const initialDates = useMemo(() => calculateOptimalInitialViewRange(backtestInfo.dateRange), [backtestInfo.dateRange])
 
   const [candlesticDataFeed, isCandleStickDataFeedLoading] =
     useDataFeed<CandlestickData>(backtest, candlesticFetcher);
@@ -158,13 +158,15 @@ export function BacktestVisualization({
         <div className="flex-1 flex flex-col min-h-0">
           {/* Chart Navigation */}
           <div className="flex-1 bg-background p-4 min-h-0">
-            <Chart>
+            <Chart initialDates={initialDates}>
               {candlesticDataFeed && orderDataFeed? (
-                <Series type="candlestick" dataFeed={candlesticDataFeed}>
+                <Series type="candlestick" dataFeed={candlesticDataFeed} main={true}>
+                  {/*
                   <Marker
                   type="order"
                   dataFeed={orderDataFeed}
                   />
+                  */}
                 </Series>
               ) : (
                 <h1>Loading candlestick series</h1>

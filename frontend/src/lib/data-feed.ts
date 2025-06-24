@@ -1,297 +1,668 @@
 import { IRange, Time } from "lightweight-charts";
-
-export interface TimeBasedData {
-  time: Time;
-}
-
+import { Mutex } from "async-mutex";
+import { TimeBasedData } from "@/types/time-based-data";
 interface bufferData<T extends TimeBasedData> {
-  data: T[];
-  range: IRange<Time>;
+    data: T[];
+    range: IRange<Time>;
 }
 
-export class DataFeed<T extends TimeBasedData> {
-  private _viewRange!: IRange<Time>;
-  private readonly _fetchData: (range: IRange<Time>) => T[];
-  private readonly _data: bufferData<T>;
-  private readonly _dataBounds: IRange<Time>;
-  private _onDataUpdateCallback: ((data: T[]) => void) | null = null;
-  private _onDataAppendCallback: ((data: T[]) => void) | null = null;
-  private _onInitialDataLoadedCallback: (() => void) | null = null;
-  private _isLoading: boolean = false;
-  private _updateTimeout: NodeJS.Timeout | null = null;
-  private _initialDataLoaded: boolean = false;
-  private readonly CHUNK_SIZE = 30000;
-  private readonly MARGIN = 15000;
-  private readonly INITIAL_CHUNKS = 1;
+export class TimeRangeDataFeed<T extends TimeBasedData> {
+    private _viewRange!: IRange<Time>;
+    private readonly _fetchData: (range: IRange<Time>) => T[];
+    private readonly _data: bufferData<T>;
+    private readonly _dataBounds: IRange<Time>;
+    private _onDataUpdateCallback: ((data: T[]) => void) | null = null;
+    private _onInitialDataLoadedCallback: (() => void) | null = null;
+    private _isLoading: boolean = false;
+    private _initialDataLoaded: boolean = false;
+    private readonly CHUNK_SIZE = 40000;
+    private readonly MARGIN = 20000;
+    private readonly INITIAL_CHUNKS = 1;
+    private readonly _updateDataMutex = new Mutex();
+    private readonly _trimDataMutex = new Mutex();
 
-  constructor(
-    dataFetcher: (range: IRange<Time>) => T[],
-    maxDataRange: IRange<Time>,
-  ) {
-    this._fetchData = dataFetcher;
-    this._dataBounds = maxDataRange;
-    this._data = {
-      data: [],
-      range: { from: 0, to: 0 } as IRange<Time>,
-    };
-  }
-
-  /**
-   *
-   * @param data
-   */
-  public onDataUpdate() {
-    if (this._onDataUpdateCallback) this._onDataUpdateCallback(this._data.data);
-  }
-
-  /**
-   *
-   * @param initialRange
-   */
-  public async initialize(initialRange: IRange<Time>) {
-    this._viewRange = initialRange;
-    await this.updateData();
-    // Trigger initial data loaded callback if this is the first data load
-    if (!this._initialDataLoaded && this.data.data.length > 0) {
-      this._initialDataLoaded = true;
-      if (this._onInitialDataLoadedCallback) {
-        this._onInitialDataLoadedCallback();
-      }
-    }
-  }
-
-  private setData(newData: T[]) {
-    this._data.data = newData;
-    this._data.range.from = this._data.data[0].time;
-    this._data.range.to = this._data.data[this._data.data.length - 1].time;
-    this.onDataUpdate();
-    console.log(
-      `Data has been updated Length: ${this._data.data.length} Range: ${this.data.range.from} -> ${this.data.range.to}`,
-    );
-  }
-
-  private appendData(newData: T[]) {
-    if (newData.length === 0) return;
-
-    // Double-check for duplicates - remove any data that already exists
-    const currentEndTime =
-      this._data.data.length > 0
-        ? (this._data.data[this._data.data.length - 1].time as number)
-        : 0;
-    const filteredNewData = newData.filter(
-      (item) => (item.time as number) > currentEndTime,
-    );
-
-    if (filteredNewData.length === 0) {
-      console.log("No new data to append - all data points already exist");
-      return;
+    constructor(dataFetcher: (range: IRange<Time>) => T[], maxDataRange: IRange<Time>) {
+        this._fetchData = dataFetcher;
+        this._dataBounds = maxDataRange;
+        this._data = {
+            data: [],
+            range: { from: 0, to: 0 } as IRange<Time>,
+        };
     }
 
-    // Append the new data
-    this._data.data = [...this._data.data, ...filteredNewData];
-    this._data.range.to = this._data.data[this._data.data.length - 1].time;
-
-    // Trim data if it gets too large
-    this.trimDataToChunkLimit();
-
-    // Notify that new data was appended (not replaced)
-    this.onDataUpdate();
-
-    console.log(
-      `Data appended: ${filteredNewData.length} new items. Total: ${this._data.data.length}`,
-    );
-  }
-
-  private trimDataToChunkLimit() {
-    const maxChunks = 2;
-    const maxDataPoints = this.CHUNK_SIZE * maxChunks;
-
-    // Check to trim left
-    const extraDataRange = (this._viewRange.from as number) - (this._data.range.from as number)
-    console.log("Extra Data Range: ", extraDataRange)
-    if (extraDataRange > this.MARGIN) {
-      console.log("Trimming data from: ", this.data.data.length)
-
-
-    }
-  }
-
-  private async getInitialData() {
-    console.log("Initializing data for view range: ", this._viewRange);
-
-    const dataRange: IRange<Time> = {
-      from: Math.max(
-        (this._viewRange.from as number) -
-          this.CHUNK_SIZE * this.INITIAL_CHUNKS,
-        this._dataBounds.from as number,
-      ) as Time,
-      to: Math.min(
-        (this._viewRange.to as number) + this.CHUNK_SIZE * this.INITIAL_CHUNKS,
-        this._dataBounds.to as number,
-      ) as Time,
-    };
-
-    console.log("Data Range: ", dataRange);
-    const fetchedData = await this._fetchData(dataRange);
-
-    if (fetchedData.length === 0) {
-      console.warn("Couldnt get more data");
-      return;
+    /**
+     *
+     * @param data
+     */
+    public onDataUpdate() {
+        if (this._onDataUpdateCallback) {
+            this._onDataUpdateCallback(this._data.data);
+            console.log(
+                `Data has been updated Length: ${this._data.data.length} Range: ${this.data.range.from} -> ${this.data.range.to}`,
+            );
+        }
     }
 
-    console.log(
-      `Fetched ${fetchedData.length} data entries for view range ${dataRange.from} -> ${dataRange.to}`,
-    );
-    this.setData(fetchedData);
-  }
+    /**
+     *
+     * @param initialRange
+     */
+    public async initialize(initialRange: IRange<Time>) {
+        this._viewRange = initialRange;
+        await this._updateData();
+        // Trigger initial data loaded callback if this is the first data load
+        if (!this._initialDataLoaded && this.data.data.length > 0) {
+            this._initialDataLoaded = true;
+            if (this._onInitialDataLoadedCallback) {
+                this._onInitialDataLoadedCallback();
+            }
+        }
+    }
 
-  /**
-   * Fetches data to keep up with the view range
-   */
-  private async updateData(diff?: number) {
-    if (this._isLoading === true) return;
-    this._isLoading = true;
+    private setData(newData: T[]) {
+        this._data.data = newData;
+        this._data.range.from = this._data.data[0].time;
+        this._data.range.to = this._data.data[this._data.data.length - 1].time;
+    }
 
-    try {
+    private trimData() {
+        const dataRangeNum = this._data.range as IRange<number>;
+        const viewRangeNum = this._viewRange as IRange<number>;
+        const dataBoundsNum = this._dataBounds as IRange<number>;
 
-      if (this._data.data.length === 0) {
-        await this.getInitialData();
-        return;
-      }
+        console.log("DataFeed: Trimming data")
+        const targetDataRange: IRange<Time> = {
+            from: Math.max(viewRangeNum.from - this.CHUNK_SIZE, dataBoundsNum.from) as Time,
+            to: Math.min(viewRangeNum.to + this.CHUNK_SIZE, dataBoundsNum.to) as Time,
+        };
 
-      // Check if we need to load data to the right
-      const rightDiff =
-        (this._data.range.to as number) - (this._viewRange.to as number);
-
-      // Check if we're already at the right boundary
-      if ((this._data.range.to as number) >= (this._dataBounds.to as number)) {
-        console.log("Already at right boundary, no more data to load");
-        return;
-      }
-
-      if (rightDiff < this.MARGIN) {
-        const newData = await this._fetchData({
-          from: this.data.range.to,
-          to: Math.min(
-            (this.data.range.to as number) + this.CHUNK_SIZE,
-            this._dataBounds.to as number,
-          ) as Time,
+        const trimmedData = this._data.data.filter((item: T) => {
+            return item.time >= targetDataRange.from && item.time <= targetDataRange.to;
         });
+        this.setData(trimmedData);
+    }
+
+    private async getInitialData() {
+        console.log("Initializing data for view range: ", this._viewRange);
+
+        const dataRange: IRange<Time> = {
+            from: Math.max(
+                (this._viewRange.from as number) - this.CHUNK_SIZE * this.INITIAL_CHUNKS,
+                this._dataBounds.from as number,
+            ) as Time,
+            to: Math.min(
+                (this._viewRange.to as number) + this.CHUNK_SIZE * this.INITIAL_CHUNKS,
+                this._dataBounds.to as number,
+            ) as Time,
+        };
+
+        console.log("Data Range: ", dataRange);
+        const fetchedData = await this._fetchData(dataRange);
+
+        if (fetchedData.length === 0) {
+            console.warn("Couldnt get more data");
+            return fetchedData.length;
+        }
 
         console.log(
-          `Fetched ${newData.length} data entries for ${this.data.range.to} -> ${Math.min((this.data.range.to as number) + this.CHUNK_SIZE, this._dataBounds.to as number)}`,
+            `Fetched ${fetchedData.length} data entries for view range ${dataRange.from} -> ${dataRange.to}`,
+        );
+        this.setData(fetchedData);
+        return fetchedData.length
+    }
+
+    private _binarySearch(array: T[], target: T) {
+        let l = 0;
+        let r = array.length - 1;
+
+        while (l <= r) {
+            const m = l + Math.floor((r - l) / 2);
+            if ((array[m].time as number) < (target.time as number)) {
+                l = m + 1;
+            } else if ((array[m].time as number) > (target.time as number)) {
+                r = m - 1;
+            } else {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    private async _updateDataInDirection(direction: "left" | "right", neededData: number) {
+        const dataRangeNum = this._data.range as IRange<number>;
+        const viewRangeNum = this._viewRange as IRange<number>;
+        const dataBoundsNum = this._dataBounds as IRange<number>;
+        // Check if we need to load data to the right
+        console.log(`DataFeed: updating data to the ${direction}`);
+
+        if (direction === "left" && this._data.range.from >= this._dataBounds.from) {
+            console.log("DataFeed: All data to the left fetched");
+            return 0;
+        }
+        if (direction === "right" && this._data.range.to >= this._dataBounds.to) {
+            console.log("DataFeed: All data to the left fetched");
+            return 0;
+        }
+        // Check if we have to fetch to the right
+        // From the end of current data -> min(endOfCurrentData + chunck Size or endDataBound)
+        const newDataBounds = {
+            from: this._data.range.to,
+            to: Math.min(dataRangeNum.to + this.CHUNK_SIZE, dataBoundsNum.to) as Time,
+        };
+
+        const newData = await this._fetchData(newDataBounds);
+
+        console.log(
+            `Fetched ${newData.length} data entries for ${this.data.range.to} -> ${Math.min((this.data.range.to as number) + this.CHUNK_SIZE, this._dataBounds.to as number)}`,
         );
 
         if (newData.length === 0) {
-          console.log("No more data available from API");
-          return;
+            console.log("No more data available from API");
+            return newData.length;
         }
 
+        // Optime duplicate filtering using binary search and splice
         // Remove duplicates before appending
-        const dataEndTime = this._data.data[this._data.data.length - 1]
-          .time as number;
-        const filteredData = newData.filter(
-          (item) => (item.time as number) > dataEndTime,
+        if (direction === "right") {
+            const dataEndTime = this._data.data[this._data.data.length - 1].time as number;
+            const filteredData = newData.filter((item) => (item.time as number) > dataEndTime);
+            this.setData([...this._data.data, ...filteredData]);
+            return filteredData.length;
+        } else {
+            const dataStartTime = this._data.data[0].time as number;
+            const filteredData = newData.filter((item) => (item.time as number) < dataStartTime);
+            this._data.data = [...filteredData, ...this._data.data];
+            this._data.range.from = this._data.data[0].time;
+            this.setData(filteredData);
+            return filteredData.length;
+        }
+    }
+
+    private _needToUpdate() {
+        const dataRangeNum = this._data.range as IRange<number>;
+        const viewRangeNum = this._viewRange as IRange<number>;
+
+        // Initial data load
+        if (this._data.data.length === 0) {
+            return true;
+        }
+
+        const rightDiff = dataRangeNum.to - viewRangeNum.to;
+        const leftDiff = viewRangeNum.from - dataRangeNum.from;
+        console.log(`DataFeed: <- leftDiff : ${leftDiff} rightDiff ${rightDiff} ->`);
+        if (rightDiff < this.MARGIN) {
+            return true;
+        }
+        if (leftDiff < this.MARGIN) {
+            return true;
+        }
+
+        return false;
+    }
+    /**
+     * Fetches data to keep up with the view range
+     */
+    private async _updateData() {
+        this._isLoading = true;
+        let dataHasBeenUpdated: boolean = false
+        try {
+            const dataRangeNum = this._data.range as IRange<number>;
+            const viewRangeNum = this._viewRange as IRange<number>;
+            const dataBoundsNum = this._dataBounds as IRange<number>;
+
+            // Initial data load
+            if (this._data.data.length === 0) {
+                const newData = await this.getInitialData();
+                if (newData > 0) {
+                    dataHasBeenUpdated = true
+                }
+                return;
+            }
+
+            const rightDiff = dataRangeNum.to - viewRangeNum.to;
+            const leftDiff = viewRangeNum.from - dataRangeNum.from;
+            console.log(`DataFeed: <- leftDiff : ${leftDiff} rightDiff ${rightDiff} ->`);
+            if (rightDiff < this.MARGIN) {
+                const newData = await this._updateDataInDirection("right", rightDiff);
+                if (newData > 0) {
+                    dataHasBeenUpdated = true
+                }
+
+            }
+            if (leftDiff < this.MARGIN) {
+                const newData = await this._updateDataInDirection("left", leftDiff);
+                if (newData > 0) {
+                    dataHasBeenUpdated = true
+                }
+            }
+        } finally {
+            this._isLoading = false;
+            if (dataHasBeenUpdated) {
+                this.onDataUpdate()
+            }
+        }
+    }
+
+    public unsubscribeToDataUpdates() {
+        this._onDataUpdateCallback = null;
+    }
+    /**
+     * Function executed when the data is updated, place to update the series data
+     */
+    public subscribeToDataUpdates(onNewDataHandler: (data: T[]) => void) {
+        if (this._onDataUpdateCallback == null) {
+            console.log("Subscribed to new data events on buffer");
+            this._onDataUpdateCallback = onNewDataHandler;
+        } else {
+            console.warn("On new data was already setted up");
+        }
+    }
+
+    /**
+     * Subscribe to be notified when initial data is loaded
+     */
+    public subscribeToInitialDataLoaded(callback: () => void) {
+        if (this._onInitialDataLoadedCallback == null) {
+            console.log("Subscribed to initial data loaded events");
+            this._onInitialDataLoadedCallback = callback;
+        } else {
+            console.warn("Initial data loaded callback was already set up");
+        }
+    }
+
+    /**
+     * Function used to
+     * @param newRange
+     */
+    public updateDataRange(newRange: IRange<Time>) {
+        // Always update the view range, even if we're loading
+        this._viewRange = newRange;
+
+        console.log("ViewRange: ", this._viewRange);
+        if (!this._needToUpdate()) return;
+
+        this._updateDataMutex.acquire().then(async () => {
+            try {
+                console.log("===============LOCK==============");
+                await this._updateData();
+            } finally {
+                console.log("===============RELEASE==============");
+                this._updateDataMutex.release();
+            }
+        });
+    }
+
+    public free() {
+        console.log("Clearing dataFeed data");
+        (this._data.data = []),
+            (this._data.range = { from: 0, to: 0 } as IRange<Time>),
+            (this._onDataUpdateCallback = null);
+        this._onInitialDataLoadedCallback = null;
+    }
+
+    public get currentViewRange() {
+        return this._viewRange;
+    }
+
+    public get data() {
+        return this._data;
+    }
+
+    public get isInitialDataLoaded() {
+        return this._initialDataLoaded;
+    }
+
+    public get isLoading() {
+        return this._isLoading;
+    }
+}
+
+export class LogicalRangeDataFeed<T extends TimeBasedData> {
+    private _viewTimeRange!: IRange<Time>;
+    private readonly _fetchData: (range: IRange<Time>) => T[];
+    private readonly _data: bufferData<T>;
+    private readonly _dataBounds: IRange<Time>;
+    private _onDataUpdateCallback: ((data: T[]) => void) | null = null;
+    private _onInitialDataLoadedCallback: (() => void) | null = null;
+    private _isLoading: boolean = false;
+    private _initialDataLoaded: boolean = false;
+    private readonly CHUNK_SIZE = 40000;
+    private readonly MARGIN = 20000;
+    private readonly INITIAL_CHUNKS = 1;
+    private readonly _updateDataMutex = new Mutex();
+    private readonly _trimDataMutex = new Mutex();
+
+    constructor(dataFetcher: (range: IRange<Time>) => T[], maxDataRange: IRange<Time>) {
+        this._fetchData = dataFetcher;
+        this._dataBounds = maxDataRange;
+        this._data = {
+            data: [],
+            range: { from: 0, to: 0 } as IRange<Time>,
+        };
+    }
+
+    /**
+     *
+     * @param data
+     */
+    public onDataUpdate() {
+            console.log(
+                `DataFeed: Data has been updated Length: ${this._data.data.length} Range: ${new Date(this.data.range.from as number * 1000)} -> ${new Date(this.data.range.to as number * 1000)}`,
+            );
+        if (this._onDataUpdateCallback) {
+            this._onDataUpdateCallback(this._data.data);
+        }
+    }
+
+    /**
+     *
+     * @param initialRange
+     */
+    public async initialize(initialRange: IRange<Time>) {
+        this._viewTimeRange = initialRange;
+        await this._updateData();
+        // Trigger initial data loaded callback if this is the first data load
+        if (!this._initialDataLoaded && this.data.data.length > 0) {
+            this._initialDataLoaded = true;
+            if (this._onInitialDataLoadedCallback) {
+                this._onInitialDataLoadedCallback();
+            }
+        }
+    }
+
+    private setData(newData: T[]) {
+        if (!newData.length ) {
+            throw Error("newData can't be empty")
+        }
+
+        this._data.data = newData;
+        this._data.range.from = this._data.data[0].time;
+        this._data.range.to = this._data.data[this._data.data.length - 1].time;
+    }
+
+    private async trimData(excessEntries: number, direction: 'left' | 'right') {
+        if (this._isLoading) return
+
+        try {
+            this._isLoading = true
+
+            if (this._data.data.length < excessEntries) {
+                throw Error("can't trim more entries than the lenght of data")
+            }
+            const startRemovingIndex = direction === 'left' ? 0 : this._data.data.length - excessEntries
+            const deletedEntries = this._data.data.splice(startRemovingIndex, excessEntries)
+            this._data.range.from = this._data.data[0].time;
+            this._data.range.to = this._data.data[this._data.data.length - 1].time;
+            this.onDataUpdate()
+            console.log(`DataFeed: trimmed ${deletedEntries.length} from the ${direction}`)
+
+        } finally {
+            this._isLoading = false
+        }
+    }
+
+
+    private async getInitialData() {
+        console.log("Initializing data for view range: ", this._viewTimeRange);
+
+        const dataRange: IRange<Time> = {
+            from: Math.max(
+                (this._viewTimeRange.from as number) - this.CHUNK_SIZE * this.INITIAL_CHUNKS,
+                this._dataBounds.from as number,
+            ) as Time,
+            to: Math.min(
+                (this._viewTimeRange.to as number) + this.CHUNK_SIZE * this.INITIAL_CHUNKS,
+                this._dataBounds.to as number,
+            ) as Time,
+        };
+
+        console.log("Data Range: ", dataRange);
+        const fetchedData = await this._fetchData(dataRange);
+
+        if (fetchedData.length === 0) {
+            console.warn("Couldnt get more data");
+            return fetchedData.length;
+        }
+
+        console.log(
+            `DataFeed: Fetched ${fetchedData.length} data entries for view range ${dataRange.from} -> ${dataRange.to}`,
+        );
+        this.setData(fetchedData);
+        return fetchedData.length
+    }
+
+    private _binarySearch(array: T[], target: T) {
+        let l = 0;
+        let r = array.length - 1;
+
+        while (l <= r) {
+            const m = l + Math.floor((r - l) / 2);
+            if ((array[m].time as number) < (target.time as number)) {
+                l = m + 1;
+            } else if ((array[m].time as number) > (target.time as number)) {
+                r = m - 1;
+            } else {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    private async _updateDataInDirection(direction: "left" | "right", neededData: number) {
+        const dataRangeNum = this._data.range as IRange<number>;
+        const viewRangeNum = this._viewTimeRange as IRange<number>;
+        const dataBoundsNum = this._dataBounds as IRange<number>;
+        // Check if we need to load data to the right
+        console.log(`DataFeed: updating data to the ${direction}`);
+
+        if (direction === "left" && this._data.range.from <= this._dataBounds.from) {
+            console.log("DataFeed: All data to the left fetched");
+            return 0;
+        }
+        if (direction === "right" && this._data.range.to >= this._dataBounds.to) {
+            console.log("DataFeed: All data to the right fetched");
+            return 0;
+        }
+        // Check if we have to fetch to the right
+        // From the end of current data -> min(endOfCurrentData + chunck Size or endDataBound)
+
+        const newDataBounds = direction === 'right' ? {
+            from: this._data.range.to,
+            to: Math.min(dataRangeNum.to + this.CHUNK_SIZE, dataBoundsNum.to) as Time,
+        } : {
+            from: Math.max(viewRangeNum.from, dataBoundsNum.from) as Time,
+            to: (this._data.range.from) as Time,
+
+        };
+
+        const newData = await this._fetchData(newDataBounds);
+
+        console.log(
+            `Fetched ${newData.length} data entries for ${newDataBounds.from} -> ${newDataBounds.to as number}`,
         );
 
-        if (filteredData.length > 0) {
-          this.appendData(filteredData);
-        } else {
-          console.log("No new data to append after filtering duplicates");
+        if (newData.length === 0) {
+            console.log("No more data available from API");
+            return newData.length;
         }
 
-
-      }
-    } finally {
-      this._isLoading = false;
-    }
-  }
-
-  public unsubscribeToDataUpdates() {
-    this._onDataUpdateCallback = null;
-  }
-  /**
-   * Function executed when the data is updated, place to update the series data
-   */
-  public subscribeToDataUpdates(onNewDataHandler: (data: T[]) => void) {
-    if (this._onDataUpdateCallback == null) {
-      console.log("Subscribed to new data events on buffer");
-      this._onDataUpdateCallback = onNewDataHandler;
-    } else {
-      console.warn("On new data was already setted up");
-    }
-  }
-
-  /**
-   * Subscribe to data append events (for incremental updates)
-   */
-  public subscribeToDataAppends(onDataAppendHandler: (newData: T[]) => void) {
-    if (this._onDataAppendCallback == null) {
-      console.log("Subscribed to data append events on buffer");
-      this._onDataAppendCallback = onDataAppendHandler;
-    } else {
-      console.warn("Data append callback was already set up");
-    }
-  }
-
-  /**
-   * Subscribe to be notified when initial data is loaded
-   */
-  public subscribeToInitialDataLoaded(callback: () => void) {
-    if (this._onInitialDataLoadedCallback == null) {
-      console.log("Subscribed to initial data loaded events");
-      this._onInitialDataLoadedCallback = callback;
-    } else {
-      console.warn("Initial data loaded callback was already set up");
-    }
-  }
-
-  /**
-   * Function used to
-   * @param newRange
-   */
-  public async updateDataRange(newRange: IRange<Time>, diff?: number) {
-    // Always update the view range, even if we're loading
-    this._viewRange = newRange;
-
-    // Clear existing timeout
-    if (this._updateTimeout) {
-      clearTimeout(this._updateTimeout);
+        // Optime duplicate filtering using binary search and splice
+        // Remove duplicates before appending
+        if (direction === "right") {
+            const dataEndTime = this._data.data[this._data.data.length - 1].time as number;
+            const filteredData = newData.filter((item) => (item.time as number) > dataEndTime);
+            this.setData([...this._data.data, ...filteredData]);
+            return filteredData.length;
+        } else {
+            const dataStartTime = this._data.data[0].time as number;
+            const filteredData = newData.filter((item) => (item.time as number) < dataStartTime);
+            this.setData([...filteredData, ...this._data.data]);
+            return filteredData.length;
+        }
     }
 
-    // If already loading, schedule a delayed update instead of running concurrently
-    /*
-        if (this._isLoading) {
-            console.log("Already loading data, scheduling delayed update")
-            this._updateTimeout = setTimeout(() => {
-                this._updateTimeout = null
-                this.updateDataRange(newRange, diff)
-            }, 200)
-            return
+    /**
+     * Fetches data to keep up with the view range
+     */
+    private async _updateData() {
+        this._isLoading = true;
+        let dataHasBeenUpdated: boolean = false
+        try {
+            const dataRangeNum = this._data.range as IRange<number>;
+            const viewRangeNum = this._viewTimeRange as IRange<number>;
+            const dataBoundsNum = this._dataBounds as IRange<number>;
+
+            // Initial data load
+            if (this._data.data.length === 0) {
+                const newData = await this.getInitialData();
+                if (newData > 0) {
+                    dataHasBeenUpdated = true
+                }
+                return;
+            }
+
+            const rightDiff = dataRangeNum.to - viewRangeNum.to;
+            const leftDiff = dataRangeNum.from - viewRangeNum.from ;
+            // console.log(`DataFeed: <- leftDiff : ${leftDiff} rightDiff ${rightDiff} ->`);
+            // if (rightDiff < this.MARGIN) {
+            //     const newData = await this._updateDataInDirection("right", rightDiff);
+            //     if (newData > 0) {
+            //         dataHasBeenUpdated = true
+            //     }
+
+            // }
+            // if (leftDiff < this.MARGIN) {
+                const newData = await this._updateDataInDirection("left", leftDiff);
+                if (newData > 0) {
+                    dataHasBeenUpdated = true
+                // }
+            }
+        } finally {
+            this._isLoading = false;
+            if (dataHasBeenUpdated) {
+                //this.trimData()
+                this.onDataUpdate()
+            }
+        }
+    }
+
+    public unsubscribeToDataUpdates() {
+        this._onDataUpdateCallback = null;
+    }
+    /**
+     * Function executed when the data is updated, place to update the series data
+     */
+    public subscribeToDataUpdates(onNewDataHandler: (data: T[]) => void) {
+        if (this._onDataUpdateCallback == null) {
+            console.log("Subscribed to new data events on buffer");
+            this._onDataUpdateCallback = onNewDataHandler;
+        } else {
+            console.warn("On new data was already setted up");
+        }
+    }
+
+    /**
+     * Subscribe to be notified when initial data is loaded
+     */
+    public subscribeToInitialDataLoaded(callback: () => void) {
+        if (this._onInitialDataLoadedCallback == null) {
+            console.log("Subscribed to initial data loaded events");
+            this._onInitialDataLoadedCallback = callback;
+        } else {
+            console.warn("Initial data loaded callback was already set up");
+        }
+    }
+
+    /**
+     * Function used to
+     * @param newRange
+     */
+    public async updateDataRange(newRange: IRange<number>) {
+        console.log("===============UPDATE CALLED==============");
+
+        if (this._updateDataMutex.isLocked() || this._isLoading) return
+        const barMargin = 500
+        const trimMargin = 200
+
+        if (newRange.from <= barMargin) {
+        console.log("===============UPDATE START==============");
+        const outOfViewDataRight = this._data.data.length - Math.floor(newRange.to)
+            console.log("DataFeed: OutOfViewDataRight", outOfViewDataRight)
+            this._viewTimeRange = {
+                from: (this._viewTimeRange.from as number - (this.CHUNK_SIZE * 2)) as Time,
+                to: this._viewTimeRange.to
+            }
+            await this._updateData();
+            if (outOfViewDataRight > trimMargin) {
+                // this.trimData(Math.abs(outOfViewDataRight / 3), 'right')
+            }
+            console.log("===============UPDATE END==============");
+
+            /*
+            this._updateDataMutex.acquire().then(async () => {
+                try {
+                    console.log("===============UPDATE LOCK==============");
+                    this._viewTimeRange = {
+                        from: (this._viewTimeRange.from as number - (this.CHUNK_SIZE * 2)) as Time,
+                        to: this._viewTimeRange.to
+                    }
+                    await this._updateData();
+                    console.log("DataFeed: entries after update: ", this._data.data.length)
+                } finally {
+                    const outOfViewDataRight = this._data.data.length - Math.floor(newRange.to)
+                    console.log("===============UPDATE RELEASE==============");
+                    this._updateDataMutex.release();
+                }
+            }); */
+        }
+
+        /*
+        if (this._updateDataMutex.isLocked() || this._trimDataMutex.isLocked() || this._isLoading) return
+
+        const outOfViewDataRight = this._data.data.length - Math.floor(newRange.to)
+            console.log("DataFeed: OutOfViewDataRight", outOfViewDataRight)
+
+        if (outOfViewDataRight > trimMargin) {
+            this._trimDataMutex.acquire().then(async () => {
+                try {
+                    console.log("===============TRIM LOCK==============");
+                    console.log("DataFeed: entries before trim: ", this._data.data.length)
+                    await this.trimData(500, 'right');
+                } finally {
+                    this._trimDataMutex.release()
+                    console.log("DataFeed: entries after trim: ", this._data.data.length)
+                    const postoutOfViewDataRight = this._data.data.length - Math.floor(newRange.to)
+                    console.log("DataFeed: POST OutOfViewDataRight", postoutOfViewDataRight)
+                    console.log("===============TRIM RELEASE==============");
+
+                }
+            });
+
+
         }*/
+    }
 
-    console.log("ViewRange: ", this._viewRange);
-    await this.updateData(diff);
+    public free() {
+        console.log("Clearing dataFeed data");
+        (this._data.data = []),
+            (this._data.range = { from: 0, to: 0 } as IRange<Time>),
+            (this._onDataUpdateCallback = null);
+        this._onInitialDataLoadedCallback = null;
+    }
 
-    // Set timeout after update completes to prevent rapid successive calls
-    this._updateTimeout = setTimeout(() => {
-      this._updateTimeout = null;
-    }, 100);
-  }
+    public get currentViewRange() {
+        return this._viewTimeRange;
+    }
 
-  public get currentViewRange() {
-    return this._viewRange;
-  }
+    public get data() {
+        return this._data;
+    }
 
-  public get data() {
-    return this._data;
-  }
+    public get isInitialDataLoaded() {
+        return this._initialDataLoaded;
+    }
 
-  public get isInitialDataLoaded() {
-    return this._initialDataLoaded;
-  }
-
-  public get isLoading() {
-    return this._isLoading;
-  }
+    public get isLoading() {
+        return this._isLoading;
+    }
 }

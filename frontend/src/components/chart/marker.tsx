@@ -1,8 +1,7 @@
 import { forwardRef, useContext, useEffect } from "react"
 import { SeriesContext } from "@/components/chart/series"
-import { DataFeed, TimeBasedData } from "@/lib/data-feed"
+import { TimeRangeDataFeed, TimeBasedData } from "@/lib/data-feed"
 import { createSeriesMarkers, SeriesMarker, Time,  } from "lightweight-charts"
-import { ChartContext } from "./chart"
 import { useChartContext } from "@/hooks/useChartContext"
 import { useSeriesContext } from "@/hooks/useSeriesContext"
 
@@ -12,7 +11,7 @@ export interface MarkerHandle {
 
 interface MarkerProps {
     markers?: any[]
-    dataFeed?: DataFeed<SeriesMarker<Time>>
+    dataFeed?: TimeRangeDataFeed<SeriesMarker<Time>>
     type: "order"
 }
 
@@ -20,19 +19,21 @@ export const Marker = forwardRef<MarkerHandle, MarkerProps>(({markers, dataFeed}
     const seriesContext = useSeriesContext()
     const chartContext = useChartContext()
 
+    const series = seriesContext.api()
+
     useEffect(() => {
         console.log("Creating marker")
         if (dataFeed) {
             console.log("Adding marker datafeed")
             chartContext.addDataFeed(dataFeed)
-            if (seriesContext.api()) {
+            if (series) {
                 console.log("Initial Markers: ", dataFeed.data.data)
                 createSeriesMarkers(seriesContext.api(), dataFeed.data.data)
             }
             dataFeed.subscribeToDataUpdates((markers) => {
-                if (seriesContext.api() && markers) {
+                if (series && markers) {
                     console.log("Markers: ", markers)
-                    createSeriesMarkers(seriesContext.api(), markers)
+                    createSeriesMarkers(series, markers)
                 }
             })
         }
@@ -47,7 +48,6 @@ export const Marker = forwardRef<MarkerHandle, MarkerProps>(({markers, dataFeed}
     }, [dataFeed])
 
 
-    const series = seriesContext.api()
 
 
     return null

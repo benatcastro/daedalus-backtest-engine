@@ -1,5 +1,5 @@
 import Backtest from "@/types/backtest";
-import { DataFeed, TimeBasedData } from "@/lib/data-feed";
+import { LogicalRangeDataFeed as DataFeed, TimeBasedData } from "@/lib/data-feed";
 import {
   backtestDatesToRange,
   calculateOptimalInitialViewRange,
@@ -35,6 +35,7 @@ export function useDataFeed<T extends TimeBasedData>(
     });
   }, [backtest]);
 
+  /*
   useEffect(() => {
     if (!dataFeed || !optimalInitialRange) return;
 
@@ -47,5 +48,6 @@ export function useDataFeed<T extends TimeBasedData>(
       to: (optimalInitialRange.end.getTime() / 1000) as Time,
     });
   }, [dataFeed, optimalInitialRange]);
+  */
   return [dataFeed, isLoading] as const;
 }

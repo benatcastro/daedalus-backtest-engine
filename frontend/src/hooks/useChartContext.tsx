@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { ChartContext } from '@/components/chart/chart';
+import { ChartContext } from '@/components/chart/chart-container';
 
 /**
  * Custom hook to access chart context functionality
