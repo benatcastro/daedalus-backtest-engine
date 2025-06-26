@@ -3,7 +3,6 @@ import React, {
   useLayoutEffect,
   useImperativeHandle,
   useRef,
-  useContext,
   useEffect,
 } from "react";
 import {
@@ -20,7 +19,7 @@ import {
   AreaSeries,
   Time,
 } from "lightweight-charts";
-import { TimeRangeDataFeed as DataFeed, TimeBasedData } from "@/lib/data-feed";
+import { DataFeed as DataFeed } from "@/lib/data-feed";
 import { useChartContext } from "@/hooks/useChartContext";
 
 // Type definitions for your trading data
@@ -166,10 +165,10 @@ export const Series = forwardRef<ISeriesApi<any>, SeriesProps<any>>(
 
 
       // Initialize datafeed data
-      dataFeedRef.current.initialize(parent.initialRange)
-      dataFeed.subscribeToInitialDataLoaded(() => {
+      dataFeedRef.current.setRange(parent.initialRange)
+      dataFeed.subscribeToRangeUpdates(() => {
         if (series && chart && parent.initialRange) {
-          series.setData(dataFeed.data.data)
+          series.setData(dataFeed.data)
           chart.timeScale().setVisibleRange(parent.initialRange)
         }
       })

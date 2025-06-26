@@ -19,8 +19,8 @@ import {
   useRef,
 } from "react";
 import { useChartTheme } from "@/hooks/use-chart-theme";
-import { LogicalRangeDataFeed } from "@/lib/data-feed";
 import { Mutex } from "async-mutex";
+import { DataFeed as DataFeed } from "@/lib/data-feed";
 
 interface ChartContainerProps extends DeepPartial<ChartOptions> {
   container: HTMLElement;
@@ -37,11 +37,11 @@ export interface ChartApiRef {
   _api?: IChartApi;
   _lastNotLoadingViewRange: IRange<Time> | null;
   readonly initialRange: IRange<Time> | null
-  setMainDataFeed: (dataFeed: LogicalRangeDataFeed<any>) => void;
+  setMainDataFeed: (dataFeed: DataFeed<any>) => void;
   api(): IChartApi;
   free(series?: ISeriesApi<any>): void;
-  addDataFeed(dataFeed: LogicalRangeDataFeed<any>): void;
-  removeDataFeed(dataFeed: LogicalRangeDataFeed<any>): void;
+  addDataFeed(dataFeed: DataFeed<any>): void;
+  removeDataFeed(dataFeed: DataFeed<any>): void;
 }
 
 export const ChartContext = createContext<ChartApiRef | null>(null);
@@ -49,8 +49,8 @@ export const ChartContext = createContext<ChartApiRef | null>(null);
 
 export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
   (props, ref) => {
-    const mainDataFeedRef = useRef<LogicalRangeDataFeed<any>>(null)
-    const dataFeedsRef = useRef<LogicalRangeDataFeed<any>[]>([])
+    const mainDataFeedRef = useRef<DataFeed<any>>(null)
+    const dataFeedsRef = useRef<DataFeed<any>[]>([])
     const newViewEventRef = useRef<() => void>(null)
     const datafeedLoadingMutex = useRef<Mutex>(new Mutex())
     const { children, container, width, height = 300, initialRange, ...chartOptions } = props;
@@ -114,7 +114,7 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
       initialRange: initialRange,
 
 
-      setMainDataFeed(dataFeed: LogicalRangeDataFeed<any>): void {
+      setMainDataFeed(dataFeed: DataFeed<any>): void {
           console.log("ChartContainer: Main Data Feed set", dataFeed)
           mainDataFeedRef.current = dataFeed
       },
@@ -151,7 +151,7 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
         }
       },
 
-      addDataFeed(dataFeed: LogicalRangeDataFeed<any>) {
+      addDataFeed(dataFeed: DataFeed<any>) {
         dataFeedsRef.current.push(dataFeed);
         console.log(
           "ChartContainer: Added new datafeed to the list, currently updating %d",
@@ -160,7 +160,7 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
         console.log("ChartContainer: DataFeeds: ", dataFeedsRef.current.length);
       },
 
-      removeDataFeed(dataFeed: LogicalRangeDataFeed<any>) {
+      removeDataFeed(dataFeed: DataFeed<any>) {
         // Find and remove the DataFeed from the array
         const index = dataFeedsRef.current.indexOf(dataFeed);
         if (index > -1) {
@@ -213,7 +213,9 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>(
         isUpdating = true
         datafeedLoadingMutex.current.acquire().then(async () => {
           try {
-            await mainDataFeedRef.current?.updateDataRange(logicalRange)
+            if (logicalRange.from < 2000) {
+                await mainDataFeedRef.current?.loadChunkBackward()
+            }
           } finally {
             isUpdating = false
             datafeedLoadingMutex.current.release()
