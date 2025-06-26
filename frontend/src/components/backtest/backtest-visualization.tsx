@@ -4,7 +4,7 @@ import { Strategy } from "@prisma/client";
 import Backtest from "@/types/backtest";
 import { Button } from "@/components/ui/button";
 import { useCallback, useMemo } from "react";
-import { calculateOptimalInitialViewRange } from "@/utils/sample-data-generator";
+import { calculateOptimalInitialViewRange } from "@/lib/data-utils";
 import Chart from "@/components/chart/chart";
 import { Series } from "@/components/chart/series";
 import { useDataFeed } from "@/hooks/use-data-feed";

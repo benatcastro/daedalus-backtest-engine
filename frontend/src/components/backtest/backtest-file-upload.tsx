@@ -19,7 +19,7 @@ import { Plus } from "lucide-react";
 import { useState, useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FileDisplayList } from "./file-components";
-import { createDataTransferWithoutFile } from "@/utils/fileUtils";
+import { createDataTransferWithoutFile } from "@/lib/file-utils";
 import { BacktestFormValues } from "./backtest-metadata-fields";
 
 interface BacktestFileUploadProps {

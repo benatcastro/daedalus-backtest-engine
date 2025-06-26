@@ -1,6 +1,6 @@
 import { File, Folder, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { processFileStructure } from "@/utils/fileUtils";
+import { processFileStructure } from "@/lib/file-utils";
 
 /**
  * Properties for an individual file item component
