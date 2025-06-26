@@ -1,53 +1,48 @@
-import Backtest from "@/types/backtest";
-import { LogicalRangeDataFeed as DataFeed, TimeBasedData } from "@/lib/data-feed";
-import {
-  backtestDatesToRange,
-  calculateOptimalInitialViewRange,
-} from "@/utils/sample-data-generator";
+import { TimeBasedData } from "@/types/time-based-data";
+import { DataFeed, DataFeedConfig } from "@/lib/data-feed";
 import { IRange, Time } from "lightweight-charts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-export function useDataFeed<T extends TimeBasedData>(
-  backtest: Backtest | undefined,
-  dataFetcher: (range: IRange<Time>) => T[],
-) {
-  const [isLoading, setIsLoading] = useState(true);
+/**
+ * Custom hook for managing time series data for backtests visualization.
+ *
+ * This hook handles the lifecycle of an OptimizedDataFeed, including:
+ * - Converting backtest date ranges to the appropriate format
+ * - Initializing the data feed with optimal view ranges
+ * - Managing loading states
+ * - Setting up event subscriptions
+ *
+ * @template T - The type of time-based data being managed (must extend TimeBasedData)
+ * @param backtest - The backtest object containing start/end dates and other metadata
+ * @param dataFetcher - Async function that fetches data for a given time range
+ * @returns A tuple containing [dataFeed, isLoading] where dataFeed is the OptimizedDataFeed instance
+ *          and isLoading indicates whether initial data is still being loaded
+ */
+export function useDataFeed<T extends TimeBasedData>(dataBounds: IRange<Time>, dataFetcher: (range: IRange<Time>) => Promise<T[]>) {
+  const [isLoading, setIsLoading] = useState(true)
 
   // Convert the iso string from the backtest object to Dates
-  const [backtestBounds, optimalInitialRange] = useMemo(() => {
-    if (backtest) {
-      const backtestBounds = backtestDatesToRange(
-        backtest.starting_date,
-        backtest.ending_date,
-      );
-      const optimalRange = calculateOptimalInitialViewRange(backtestBounds);
-      return [backtestBounds, optimalRange];
-    }
-    return [null, null];
-  }, [backtest, dataFetcher]);
+  /**
+   * Memoized calculation of backtest date ranges and optimal view range
+   * Converts ISO date strings to Date objects and calculates the optimal
+   * range for initial view display
+   */
 
   const dataFeed = useMemo(() => {
-    if (!backtestBounds || !backtest) return null;
+    // Define a custom configuration for the data feed
+    const config: Partial<DataFeedConfig> = {
+      chunk_size: 1000,
+      max_chunk_attempts: 5,
+      fetch_attempt_time: 30000
+    };
 
-    return new DataFeed<T>(dataFetcher, {
-      from: (backtestBounds.start.getTime() / 1000) as Time,
-      to: (backtestBounds.end.getTime() / 1000) as Time,
-    });
-  }, [backtest]);
+    return (new DataFeed<T>(
+                dataFetcher,
+				dataBounds,
+                config
+              ))
+  }, [dataFetcher, dataBounds])
 
-  /*
-  useEffect(() => {
-    if (!dataFeed || !optimalInitialRange) return;
-
-    dataFeed.subscribeToInitialDataLoaded(() => {
-      setIsLoading(false);
-    });
-
-    dataFeed.initialize({
-      from: (optimalInitialRange.start.getTime() / 1000) as Time,
-      to: (optimalInitialRange.end.getTime() / 1000) as Time,
-    });
-  }, [dataFeed, optimalInitialRange]);
-  */
   return [dataFeed, isLoading] as const;
+
 }
