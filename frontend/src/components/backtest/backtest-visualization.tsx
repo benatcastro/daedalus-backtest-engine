@@ -4,7 +4,7 @@ import { Strategy } from "@prisma/client";
 import Backtest from "@/types/backtest";
 import { Button } from "@/components/ui/button";
 import { useCallback, useMemo } from "react";
-import { backtestDatesToRange, calculateOptimalInitialViewRange } from "@/utils/sample-data-generator";
+import { calculateOptimalInitialViewRange } from "@/utils/sample-data-generator";
 import Chart from "@/components/chart/chart";
 import { Series } from "@/components/chart/series";
 import { useDataFeed } from "@/hooks/use-data-feed";
@@ -17,6 +17,7 @@ interface BacktestVisualizationProps {
 
 import { Order } from "@/types/order";
 import { CandlestickData, IRange, SeriesMarker, Time } from "lightweight-charts";
+import { dateRangeToTimeRange, isoTimeToDateRange } from "@/lib/time-utils";
 
 export function BacktestVisualization({
   strategy,
@@ -24,94 +25,126 @@ export function BacktestVisualization({
 }: BacktestVisualizationProps) {
   // Extract backtest data for chart generation
   const backtestInfo = useMemo(() => {
-    const dateRange = backtestDatesToRange(
+    const dateRange = isoTimeToDateRange(
       backtest.starting_date,
       backtest.ending_date,
     );
+	const timeRange = dateRangeToTimeRange(dateRange)
+	const initialViewRange = calculateOptimalInitialViewRange(dateRange)
     return {
-      strategy,
-      backtest,
-      dateRange: dateRange,
+		dateRange,
+		timeRange,
+		initialViewRange
     };
   }, [strategy, backtest]);
 
 
   const orderFetcher = useCallback(
-    async (range: IRange<Time>) => {
-      if (!backtest) return;
+    async (range: IRange<Time>): Promise<SeriesMarker<Time>[]> => {
+      if (!backtest) return [];
 
-      // Create the query params
-      const queryParams = new URLSearchParams({
-        start: range.from.toString(),
-        end: range.to.toString(),
-      });
+      try {
+        // Convert Unix timestamps (seconds) to ISO date strings
+        const startDate = new Date((range.from as number) * 1000).toISOString();
+        const endDate = new Date((range.to as number) * 1000).toISOString();
 
-      const toSeriesMarker = (order: Order): SeriesMarker<Time> => ({
-        time: (new Date(order.time).getTime() / 1000) as Time,
-        position: order.side === "sell" ? 'aboveBar' : 'belowBar',
-        color: order.side === "sell" ? '#e91e63' : '#2196F3',
-        shape: order.side === "sell" ? 'arrowDown' : 'arrowUp',
-        text: order.side === "sell" ? 'Sell' : 'Buy',
-      });
+        // Create the query params with ISO date strings
+        const queryParams = new URLSearchParams({
+          start: startDate,
+          end: endDate,
+        });
 
-      // Form the endpoint
-      const endpoint = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/${backtest.id}/orders?${queryParams.toString()}`;
-      // Do the fetch
-      const response = await fetch(endpoint)
-      const data: Order[] = await response.json()
-      const markers: SeriesMarker<Time>[] = data.map(toSeriesMarker)
-      console.log(`Fetched markers (${range.from} -> ${range.to}): `, markers)
-      return markers
+        const toSeriesMarker = (order: Order): SeriesMarker<Time> => ({
+          time: (new Date(order.time).getTime() / 1000) as Time,
+          position: order.side === "sell" ? 'aboveBar' : 'belowBar',
+          color: order.side === "sell" ? '#e91e63' : '#2196F3',
+          shape: order.side === "sell" ? 'arrowDown' : 'arrowUp',
+          text: order.side === "sell" ? 'Sell' : 'Buy',
+        });
+
+        // Form the endpoint
+        const endpoint = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/${backtest.id}/orders?${queryParams.toString()}`;
+        console.log(`Fetching orders with range: ${startDate} -> ${endDate}`);
+
+        // Do the fetch
+        const response = await fetch(endpoint);
+
+        // Check if response is ok
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data: Order[] = await response.json();
+        const markers: SeriesMarker<Time>[] = data.map(toSeriesMarker);
+        console.log(`Fetched ${markers.length} markers`);
+        return markers;
+      } catch (e) {
+        console.error("Error fetching orders:", e);
+        return []; // Return empty array on error
+      }
     },
     [backtest],
   );
 
   const candlesticFetcher = useCallback(
-    async (range: IRange<Time>) => {
-      if (!backtest) return;
+    async (range: IRange<Time>): Promise<CandlestickData[]> => {
+      if (!backtest) return [];
 
-      // Create the query params
-      const queryParams = new URLSearchParams({
-        symbol: "ethusdt",
-        start: range.from.toString(),
-        end: range.to.toString(),
-      });
-      interface Entry {
-        timestamp: string,
-        open: number,
-        high: number,
-        low: number,
-        close: number,
-        volume: number
+      try {
+        // Convert Unix timestamps (seconds) to ISO date strings
+        const startDate = new Date((range.from as number) * 1000).toISOString();
+        const endDate = new Date((range.to as number) * 1000).toISOString();
+
+        // Create the query params with ISO date strings
+        const queryParams = new URLSearchParams({
+          symbol: "ethusdt",
+          start: range.from.toString(),
+          end: range.to.toString(),
+        });
+
+        interface Entry {
+          timestamp: string,
+          open: number,
+          high: number,
+          low: number,
+          close: number,
+          volume: number
+        }
+
+        const toCandleStickData = ({ timestamp, open, high, low, close, volume }: Entry): CandlestickData => ({
+          time: (new Date(timestamp).getTime() / 1000) as Time,
+          open,
+          high,
+          low,
+          close,
+        });
+
+        // Form the endpoint
+        const endpoint = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/${backtest.id}/candles?${queryParams.toString()}`;
+        console.log(`Fetching candles with range: ${startDate} -> ${endDate}`);
+
+        // Do the fetch
+        const response = await fetch(endpoint);
+
+        // Check if response is ok
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data: Entry[] = await response.json();
+        const candles: CandlestickData[] = data.map(toCandleStickData);
+        console.log(`Fetched ${candles.length} candles`);
+        return candles;
+      } catch (e) {
+        console.error("Error fetching candles:", e);
+        return []; // Return empty array on error
       }
-
-      const toCandleStickData = ({ timestamp, open, high, low, close, volume }: Entry): CandlestickData => ({
-        time: (new Date(timestamp).getTime() / 1000) as Time,
-        open,
-        high,
-        low,
-        close,
-      });
-
-      // Form the endpoint
-      const endpoint = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/${backtest.id}/candles?${queryParams.toString()}`;
-
-      // Do the fetch
-      const response = await fetch(endpoint)
-      const data: Entry[] = await response.json()
-      const candles: CandlestickData[] = data.map(toCandleStickData)
-      return candles
     },
     [backtest],
   );
 
-  const initialDates = useMemo(() => calculateOptimalInitialViewRange(backtestInfo.dateRange), [backtestInfo.dateRange])
-
   const [candlesticDataFeed, isCandleStickDataFeedLoading] =
-    useDataFeed<CandlestickData>(backtest, candlesticFetcher);
-
-  const [orderDataFeed, isOrderDataFeedLoading] =
-    useDataFeed<SeriesMarker<Time>>(backtest, orderFetcher);
+    useDataFeed<CandlestickData>(backtestInfo.timeRange, candlesticFetcher);
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -125,8 +158,8 @@ export function BacktestVisualization({
               </h1>
               <p className="text-xs text-muted-foreground">
                 Backtest ID: {backtest.id} |{" "}
-                {backtestInfo.dateRange.start.toLocaleDateString()} -{" "}
-                {backtestInfo.dateRange.end.toLocaleDateString()}
+                {backtestInfo.dateRange.from.toLocaleDateString()} -{" "}
+                {backtestInfo.dateRange.to.toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -158,8 +191,8 @@ export function BacktestVisualization({
         <div className="flex-1 flex flex-col min-h-0">
           {/* Chart Navigation */}
           <div className="flex-1 bg-background p-4 min-h-0">
-            <Chart initialDates={initialDates}>
-              {candlesticDataFeed && orderDataFeed? (
+            <Chart initialDates={backtestInfo.initialViewRange}>
+              {candlesticDataFeed ? (
                 <Series type="candlestick" dataFeed={candlesticDataFeed} main={true}>
                   {/*
                   <Marker
@@ -189,8 +222,8 @@ export function BacktestVisualization({
                   <span>Period:</span>
                   <span className="text-muted-foreground">
                     {Math.ceil(
-                      (backtestInfo.dateRange.end.getTime() -
-                        backtestInfo.dateRange.start.getTime()) /
+                      (backtestInfo.dateRange.to.getTime() -
+                        backtestInfo.dateRange.from.getTime()) /
                         (1000 * 60 * 60 * 24),
                     )}{" "}
                     days
@@ -199,8 +232,8 @@ export function BacktestVisualization({
                 <div className="flex justify-between">
                   <span>Current View:</span>
                   <span className="text-muted-foreground text-xs">
-                    {backtestInfo.dateRange.start.toLocaleDateString()} -{" "}
-                    {backtestInfo.dateRange.end.toLocaleDateString()}
+                    {backtestInfo.dateRange.from.toLocaleDateString()} -{" "}
+                    {backtestInfo.dateRange.to.toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
