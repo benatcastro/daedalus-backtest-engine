@@ -1,48 +1,95 @@
 import { TimeBasedData } from "@/types/time-based-data";
 import { DataFeed, DataFeedConfig } from "@/lib/data-feed";
 import { IRange, Time } from "lightweight-charts";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
- * Custom hook for managing time series data for backtests visualization.
+ * Custom React hook for managing time series data for backtests visualization.
  *
- * This hook handles the lifecycle of an OptimizedDataFeed, including:
- * - Converting backtest date ranges to the appropriate format
- * - Initializing the data feed with optimal view ranges
- * - Managing loading states
- * - Setting up event subscriptions
+ * This hook creates and manages a DataFeed instance throughout a component's lifecycle,
+ * handling initialization, data loading, and cleanup. It provides a convenient way to
+ * use the DataFeed class within React components while maintaining proper state management.
+ *
+ * Features:
+ * - Lazily initializes a DataFeed instance with optimal configuration
+ * - Manages loading state and provides it to the component
+ * - Sets up event subscriptions for loading state changes
+ * - Handles cleanup when the component unmounts
  *
  * @template T - The type of time-based data being managed (must extend TimeBasedData)
- * @param backtest - The backtest object containing start/end dates and other metadata
+ * @param dataBounds - The absolute time bounds for available data
  * @param dataFetcher - Async function that fetches data for a given time range
- * @returns A tuple containing [dataFeed, isLoading] where dataFeed is the OptimizedDataFeed instance
- *          and isLoading indicates whether initial data is still being loaded
+ * @returns A tuple containing [dataFeed, isLoading] where:
+ *          - dataFeed: The DataFeed instance for data management
+ *          - isLoading: Boolean indicating whether data is currently being loaded
+ *
+ * @example
+ * ```tsx
+ * // In a React component
+ * const [dataFeed, isLoading] = useDataFeed<CandleData>(
+ *   { from: startTime, to: endTime },
+ *   async (range) => await api.fetchCandleData(symbol, range.from, range.to)
+ * );
+ *
+ * useEffect(() => {
+ *   if (dataFeed) {
+ *     dataFeed.setRange(viewRange);
+ *   }
+ * }, [dataFeed, viewRange]);
+ *
+ * // Show loading indicator
+ * if (isLoading) {
+ *   return <LoadingSpinner />;
+ * }
+ *
+ * // Render chart with data
+ * return <CandleChart data={dataFeed.data} />;
+ * ```
  */
-export function useDataFeed<T extends TimeBasedData>(dataBounds: IRange<Time>, dataFetcher: (range: IRange<Time>) => Promise<T[]>) {
-  const [isLoading, setIsLoading] = useState(true)
+export function useDataFeed<T extends TimeBasedData>(
+  dataBounds: IRange<Time>,
+  dataFetcher: (range: IRange<Time>) => Promise<T[]>
+) {
+  // State to track the loading status of the data feed
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Convert the iso string from the backtest object to Dates
   /**
-   * Memoized calculation of backtest date ranges and optimal view range
-   * Converts ISO date strings to Date objects and calculates the optimal
-   * range for initial view display
+   * Create the data feed instance with memoization to ensure it's only
+   * created once for the same dataBounds and dataFetcher
    */
-
   const dataFeed = useMemo(() => {
-    // Define a custom configuration for the data feed
-    const config: Partial<DataFeedConfig> = {
+    // Define a custom configuration for the data feed with larger chunk size
+    // and longer fetch attempt time than the defaults
+    const config: DataFeedConfig = {
       chunk_size: 1000,
       max_chunk_attempts: 5,
       fetch_attempt_time: 30000
     };
 
+    // Create and return a new DataFeed instance
     return (new DataFeed<T>(
-                dataFetcher,
-				dataBounds,
-                config
-              ))
-  }, [dataFetcher, dataBounds])
+      dataFetcher,
+      dataBounds,
+      config
+    ));
+  }, [dataFetcher, dataBounds]);
 
+  /**
+   * Set up an effect to subscribe to loading state changes from the data feed
+   * This will update our local loading state whenever the data feed's loading state changes
+   */
+  useEffect(() => {
+    if (!dataFeed) return;
+
+    // Subscribe to loading state changes
+    dataFeed.subscribeToLoadingChanges(setIsLoading);
+
+    // Cleanup function to unsubscribe when the component unmounts
+    return () => {
+      dataFeed.unsubscribeFromLoadingChanges();
+    };
+  }, [dataFeed]); // Re-run effect if dataFeed changes
+
+  // Return the data feed instance and loading state as a tuple
   return [dataFeed, isLoading] as const;
-
 }
