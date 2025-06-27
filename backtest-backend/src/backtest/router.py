@@ -54,7 +54,7 @@ async def get_candles(
     start: Optional[int] = None,
     end: Optional[int] = None,
     entries: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Get candlestick data for a specific backtest.
@@ -75,8 +75,7 @@ async def get_candles(
     # Validate parameters
     if start is None and end is None:
         raise HTTPException(
-            status_code=400,
-            detail="Either 'start' or 'end' parameter must be provided"
+            status_code=400, detail="Either 'start' or 'end' parameter must be provided"
         )
 
     # Retrieve the backtest by the provided ID.
@@ -100,26 +99,26 @@ async def get_candles(
             )
 
         # Case 2: entries and end provided - return N entries ending at end time
-        elif entries is not None and end is not None :
+        elif entries is not None and end is not None:
             # For backward fetching (before end timestamp)
             end_time = datetime.fromtimestamp(end)
-
 
             batch_start_time = end_time - timedelta(days=1)
             batch_end_time = end_time
             # Get data and limit to requested entries
             candles: List[Candle] = []
-            while (len(candles) < entries):
-                batch = await dataHandler.get_candles(symbol, batch_start_time, batch_end_time)
+            while len(candles) < entries:
+                batch = await dataHandler.get_candles(
+                    symbol, batch_start_time, batch_end_time
+                )
                 candles += batch
             batch_end_time = batch_start_time
             batch_start_time = batch_start_time - timedelta(days=1)
 
-
             # Ensure we don't return more than requested entries
             # Take the most recent ones if we got more than requested
-            if (len(candles) > entries):
-                candles = candles[len(candles) - entries:]
+            if len(candles) > entries:
+                candles = candles[len(candles) - entries :]
             logger.debug(f"Entries and End Obtained {len(candles)}")
             return candles
 
@@ -131,7 +130,9 @@ async def get_candles(
             estimated_end_time = start_time + timedelta(days=entries)
 
             # Get data and limit to requested entries
-            candles = await dataHandler.get_candles(symbol, start_time, estimated_end_time)
+            candles = await dataHandler.get_candles(
+                symbol, start_time, estimated_end_time
+            )
             # Ensure we don't return more than requested entries
             if len(candles) > entries:
                 return candles[:entries]
@@ -148,7 +149,7 @@ async def get_backtest_orders(
     start: Optional[int] = None,
     end: Optional[int] = None,
     entries: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Get orders for a specific backtest with flexible time and entry options.
@@ -168,8 +169,7 @@ async def get_backtest_orders(
     # Validate parameters
     if start is None and end is None:
         raise HTTPException(
-            status_code=400,
-            detail="Either 'start' or 'end' parameter must be provided"
+            status_code=400, detail="Either 'start' or 'end' parameter must be provided"
         )
 
     # Verify the backtest exists
@@ -203,12 +203,17 @@ async def get_backtest_orders(
 
             # Query orders before the end date, ordered by time descending (newest first)
             # Limit to entries requested
-            query = db.query(Order).filter(
-                and_(
-                    Order.backtest_id == backtest_id,
-                    Order.time <= end_date,
+            query = (
+                db.query(Order)
+                .filter(
+                    and_(
+                        Order.backtest_id == backtest_id,
+                        Order.time <= end_date,
+                    )
                 )
-            ).order_by(Order.time.desc()).limit(entries)
+                .order_by(Order.time.desc())
+                .limit(entries)
+            )
 
             # Execute query
             orders = query.all()
@@ -221,12 +226,17 @@ async def get_backtest_orders(
 
             # Query orders after the start date, ordered by time ascending
             # Limit to entries requested
-            query = db.query(Order).filter(
-                and_(
-                    Order.backtest_id == backtest_id,
-                    Order.time >= start_date,
+            query = (
+                db.query(Order)
+                .filter(
+                    and_(
+                        Order.backtest_id == backtest_id,
+                        Order.time >= start_date,
+                    )
                 )
-            ).order_by(Order.time.desc()).limit(entries)
+                .order_by(Order.time.desc())
+                .limit(entries)
+            )
 
             # Execute query and return orders
             orders = query.all()
@@ -235,8 +245,7 @@ async def get_backtest_orders(
     except Exception as e:
         logger.error(f"Error retrieving orders: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Error retrieving orders: {str(e)}"
+            status_code=500, detail=f"Error retrieving orders: {str(e)}"
         )
 
 
