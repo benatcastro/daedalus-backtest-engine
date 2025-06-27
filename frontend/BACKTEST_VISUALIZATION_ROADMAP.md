@@ -54,13 +54,13 @@ Create a sophisticated trading backtest analysis interface with annotation tools
 
 - [ ] Build toolbar container with tool selection state
 - [ ] Implement drawing tools:
-  - [ ] Selection tool (default cursor)
-  - [ ] Pan tool (drag to move chart)
-  - [ ] Zoom tool (rectangle zoom)
-  - [ ] Line drawing tool (trend lines)
-  - [ ] Rectangle tool (price ranges)
-  - [ ] Text annotation tool
-  - [ ] Arrow pointing tool
+    - [ ] Selection tool (default cursor)
+    - [ ] Pan tool (drag to move chart)
+    - [ ] Zoom tool (rectangle zoom)
+    - [ ] Line drawing tool (trend lines)
+    - [ ] Rectangle tool (price ranges)
+    - [ ] Text annotation tool
+    - [ ] Arrow pointing tool
 - [ ] Add color picker for annotation styling
 - [ ] Implement undo/redo functionality
 - [ ] Create annotation persistence (save/load)
