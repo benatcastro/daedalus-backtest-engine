@@ -1,6 +1,6 @@
 import time
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from datetime import datetime
+from datetime import datetime, timedelta
 from schemas.backtest import OrderRead
 from sqlalchemy import and_
 
@@ -19,6 +19,7 @@ from backtest.Exceptions import (
 )
 from logger import logger
 from models import Order
+from backtest.Candle import Candle
 
 router = APIRouter(prefix="/backtest")
 
@@ -48,8 +49,36 @@ async def get_symbols(backtest_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{backtest_id}/candles/")
 async def get_candles(
-    backtest_id: int, symbol: str, start: int, end: int, db: Session = Depends(get_db)
+    backtest_id: int,
+    symbol: str,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+    entries: Optional[int] = None,
+    db: Session = Depends(get_db)
 ):
+    """
+    Get candlestick data for a specific backtest.
+
+    Parameters:
+    - backtest_id: ID of the backtest
+    - symbol: Trading symbol (e.g., "BTCUSD")
+    - start: Optional start timestamp (Unix epoch in seconds)
+    - end: Optional end timestamp (Unix epoch in seconds)
+    - entries: Optional number of candles to return
+
+    When using entries:
+    - If end is provided: Returns 'entries' number of candles ending at the 'end' timestamp
+    - If start is provided: Returns 'entries' number of candles starting from the 'start' timestamp
+    - If both start and end are provided: 'entries' is ignored and the time range is used
+    - If neither start nor end are provided: Returns an error
+    """
+    # Validate parameters
+    if start is None and end is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Either 'start' or 'end' parameter must be provided"
+        )
+
     # Retrieve the backtest by the provided ID.
     backtest = db.query(Backtest).filter(Backtest.id == backtest_id).first()
 
@@ -63,26 +92,86 @@ async def get_candles(
     dataHandler = DataHandlerFactory.create_handler(backtest)
 
     try:
-        return await dataHandler.get_candles(
-            symbol, datetime.fromtimestamp(start), datetime.fromtimestamp(end)
-        )
+        print(f"***********{start}*{end}*{entries}*")
+        # Case 1: Both start and end provided - use time range, ignore entries
+        if start is not None and end is not None and entries is None:
+            return await dataHandler.get_candles(
+                symbol, datetime.fromtimestamp(start), datetime.fromtimestamp(end)
+            )
+
+        # Case 2: entries and end provided - return N entries ending at end time
+        elif entries is not None and end is not None :
+            # For backward fetching (before end timestamp)
+            end_time = datetime.fromtimestamp(end)
+
+
+            batch_start_time = end_time - timedelta(days=1)
+            batch_end_time = end_time
+            # Get data and limit to requested entries
+            candles: List[Candle] = []
+            while (len(candles) < entries):
+                batch = await dataHandler.get_candles(symbol, batch_start_time, batch_end_time)
+                candles += batch
+            batch_end_time = batch_start_time
+            batch_start_time = batch_start_time - timedelta(days=1)
+
+
+            # Ensure we don't return more than requested entries
+            # Take the most recent ones if we got more than requested
+            if (len(candles) > entries):
+                candles = candles[len(candles) - entries:]
+            logger.debug(f"Entries and End Obtained {len(candles)}")
+            return candles
+
+        # Case 3: entries and start provided - return N entries starting from start time
+        elif entries is not None and start is not None:
+            # For forward fetching (after start timestamp)
+            start_time = datetime.fromtimestamp(start)
+            # Estimate end time based on entries (assuming daily candles)
+            estimated_end_time = start_time + timedelta(days=entries)
+
+            # Get data and limit to requested entries
+            candles = await dataHandler.get_candles(symbol, start_time, estimated_end_time)
+            # Ensure we don't return more than requested entries
+            if len(candles) > entries:
+                return candles[:entries]
+            logger.log(f"Obtained {len(candles)}")
+            return candles
+
     except BacktestDataException as e:
         raise HTTPException(status_code=400, detail={"message": e.message} | e.details)
 
 
 @router.get("/{backtest_id}/orders", response_model=List[OrderRead])
 async def get_backtest_orders(
-    backtest_id: int, start: int, end: int, db: Session = Depends(get_db)
+    backtest_id: int,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+    entries: Optional[int] = None,
+    db: Session = Depends(get_db)
 ):
     """
-    Get orders for a specific backtest within a time range.
+    Get orders for a specific backtest with flexible time and entry options.
 
     Parameters:
     - backtest_id: ID of the backtest
-    - start: Start timestamp (Unix epoch)
-    - end: End timestamp (Unix epoch)
-    - symbol: Optional trading symbol to filter orders
+    - start: Optional start timestamp (Unix epoch in seconds)
+    - end: Optional end timestamp (Unix epoch in seconds)
+    - entries: Optional number of orders to return
+
+    When using entries:
+    - If end is provided: Returns 'entries' number of orders ending at the 'end' timestamp
+    - If start is provided: Returns 'entries' number of orders starting from the 'start' timestamp
+    - If both start and end are provided: 'entries' is ignored and the time range is used
+    - If neither start nor end are provided: Returns an error
     """
+    # Validate parameters
+    if start is None and end is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Either 'start' or 'end' parameter must be provided"
+        )
+
     # Verify the backtest exists
     backtest = db.query(Backtest).filter(Backtest.id == backtest_id).first()
     if not backtest:
@@ -90,24 +179,65 @@ async def get_backtest_orders(
             status_code=404, detail=f"Backtest with ID {backtest_id} not found"
         )
 
-    # Convert timestamps to datetime
-    start_date = datetime.fromtimestamp(start)
-    end_date = datetime.fromtimestamp(end)
+    try:
+        # Case 1: Both start and end provided - use time range, ignore entries
+        if start is not None and end is not None:
+            start_date = datetime.fromtimestamp(start)
+            end_date = datetime.fromtimestamp(end)
 
-    # Build the query
-    query = db.query(Order).filter(
-        and_(
-            Order.backtest_id == backtest_id,
-            Order.time >= start_date,
-            Order.time <= end_date,
+            query = db.query(Order).filter(
+                and_(
+                    Order.backtest_id == backtest_id,
+                    Order.time >= start_date,
+                    Order.time <= end_date,
+                )
+            )
+
+            # Execute query and return orders
+            orders = query.all()
+            return orders
+
+        # Case 2: entries and end provided - return N entries ending at end time
+        elif entries is not None and end is not None:
+            end_date = datetime.fromtimestamp(end)
+
+            # Query orders before the end date, ordered by time descending (newest first)
+            # Limit to entries requested
+            query = db.query(Order).filter(
+                and_(
+                    Order.backtest_id == backtest_id,
+                    Order.time <= end_date,
+                )
+            ).order_by(Order.time.desc()).limit(entries)
+
+            # Execute query
+            orders = query.all()
+            orders.reverse()
+            return orders
+
+        # Case 3: entries and start provided - return N entries starting from start time
+        elif entries is not None and start is not None:
+            start_date = datetime.fromtimestamp(start)
+
+            # Query orders after the start date, ordered by time ascending
+            # Limit to entries requested
+            query = db.query(Order).filter(
+                and_(
+                    Order.backtest_id == backtest_id,
+                    Order.time >= start_date,
+                )
+            ).order_by(Order.time.desc()).limit(entries)
+
+            # Execute query and return orders
+            orders = query.all()
+            return orders
+
+    except Exception as e:
+        logger.error(f"Error retrieving orders: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving orders: {str(e)}"
         )
-    )
-
-    # Execute query and return orders
-    orders = query.all()
-
-    # Return the orders
-    return orders
 
 
 # Upload a new backtest for a strategy
