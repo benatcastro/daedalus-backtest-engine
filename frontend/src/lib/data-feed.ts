@@ -38,7 +38,7 @@ export class DataFeed<T extends TimeBasedData> {
     private readonly _buffer: TimeSortedArray;
 
     /** Fetch function that returns data for a given time range */
-    private readonly _fetchData: (range: IRange<Time>) => Promise<T[]>;
+    private readonly _fetchData: (start?: Time, end?: Time, entries?: Number) => Promise<T[]>;
 
     /** Data bounds represent the absolute min/max range of available data */
     private readonly _dataBounds: IRange<Time>;
@@ -62,7 +62,7 @@ export class DataFeed<T extends TimeBasedData> {
     private static readonly DEFAULT_CONFIG: DataFeedConfig = {
         chunk_size: 100,
         max_chunk_attempts: 5,
-        fetch_attempt_time: 10000
+        fetch_attempt_time: 10000,
     };
 
     /**
@@ -82,9 +82,9 @@ export class DataFeed<T extends TimeBasedData> {
      * ```
      */
     constructor(
-        fetchData: (range: IRange<Time>) => Promise<T[]>,
+        fetchData: (start?: Time, end?: Time, entries?: Number) => Promise<T[]>,
         dataBounds: IRange<Time>,
-        config: Partial<DataFeedConfig>
+        config?: Partial<DataFeedConfig>,
     ) {
         this._buffer = new TimeSortedArray();
         this._fetchData = fetchData;
@@ -92,7 +92,7 @@ export class DataFeed<T extends TimeBasedData> {
         // Merge provided config with defaults
         this._config = {
             ...DataFeed.DEFAULT_CONFIG,
-            ...config
+            ...config,
         };
     }
 
@@ -177,7 +177,10 @@ export class DataFeed<T extends TimeBasedData> {
             const dataBoundsEnd = timeToTimestamp(this._dataBounds.to);
 
             // Keep fetching until we've loaded enough data or reached max attempts
-            while (totalLoaded < this._config.chunk_size && attempts < this._config.max_chunk_attempts) {
+            while (
+                totalLoaded < this._config.chunk_size &&
+                attempts < this._config.max_chunk_attempts
+            ) {
                 const bufferBounds = this._buffer.getTimeBounds();
                 const bufferTimeEnd = timeToTimestamp(bufferBounds.to);
                 attempts++;
@@ -194,10 +197,13 @@ export class DataFeed<T extends TimeBasedData> {
                 };
 
                 try {
-                    const newData = await this._fetchData(timeRange);
+                    const newData = await this._fetchData(timeRange.from, timeRange.to);
 
                     if (newData.length === 0) {
-                        console.log("DataFeed: Loading forwards: no more data available for: ", timeRange)
+                        console.log(
+                            "DataFeed: Loading forwards: no more data available for: ",
+                            timeRange,
+                        );
                         // No more data available
                         break;
                     }
@@ -205,7 +211,6 @@ export class DataFeed<T extends TimeBasedData> {
                     // Append to buffer
                     const inserted = this._buffer.append(newData);
                     totalLoaded += inserted;
-
                 } catch (error) {
                     console.error("Error loading forward chunk:", error);
                     break;
@@ -292,9 +297,14 @@ export class DataFeed<T extends TimeBasedData> {
             let attempts = 0;
 
             const dataBoundsFrom = timeToTimestamp(this._dataBounds.from);
+            const dataBoundsTo = timeToTimestamp(this._dataBounds.from);
 
             // Keep fetching until we've loaded enough data or reached max attempts
-            while (totalLoaded < this._config.chunk_size && attempts < this._config.max_chunk_attempts) {
+            let lastRange: IRange<Time> | undefined;
+            while (
+                totalLoaded < this._config.chunk_size &&
+                attempts < this._config.max_chunk_attempts
+            ) {
                 attempts++;
 
                 const bufferBounds = this._buffer.getTimeBounds();
@@ -302,26 +312,43 @@ export class DataFeed<T extends TimeBasedData> {
 
                 // Calculate start time for this fetch
                 const attemptFrom = Math.max(
-                    bufferTimeFrom - this._config.fetch_attempt_time, // Request more than needed
+                    lastRange
+                        ? timeToTimestamp(lastRange.from) - this._config.fetch_attempt_time
+                        : bufferTimeFrom - this._config.fetch_attempt_time,
                     dataBoundsFrom,
+                );
+
+                const attemptTo = Math.min(
+                    lastRange
+                        ? timeToTimestamp(lastRange.from)
+                        : bufferTimeFrom - this._config.fetch_attempt_time,
+                    dataBoundsTo,
                 );
 
                 const timeRange = {
                     from: attemptFrom as Time,
-                    to: bufferBounds.from,
+                    to: attemptTo as Time,
                 };
 
                 try {
-                    const newData = await this._fetchData(timeRange);
+                    const newData = await this._fetchData(
+                        undefined,
+                        this._buffer.getTimeBounds().from,
+                        this._config.chunk_size,
+                    );
 
                     if (newData.length === 0) {
-                        console.log("DataFeed: Loading backwards: no more data available for: ", timeRange)
+                        console.log(
+                            "DataFeed: Loading backwards: no more data available for: ",
+                            timeRange,
+                        );
                         // No more data available
                         break;
                     }
 
                     // Prepend to buffer
                     const inserted = this._buffer.prepend(newData);
+                    lastRange = timeRange;
                     totalLoaded += inserted;
                 } catch (error) {
                     console.error("Error loading backward chunk:", error);
@@ -352,52 +379,12 @@ export class DataFeed<T extends TimeBasedData> {
     private async _ensureDataForRange(range: IRange<Time>): Promise<void> {
         // If buffer is empty, fetch the entire range
         if (this._buffer.length === 0) {
-            const newData = await this._fetchData(range);
+            const newData = await this._fetchData(range.from, range.to);
             if (newData.length > 0) {
                 // Just use append since buffer is empty
                 this._buffer.append(newData);
             }
             return;
-        }
-
-        // Get buffer bounds
-        const bufferBounds = this._buffer.getTimeBounds();
-
-        // Convert to IRange<number> for comparison
-        const bufferTimeRange: IRange<number> = {
-            from: timeToTimestamp(bufferBounds.from),
-            to: timeToTimestamp(bufferBounds.to),
-        };
-
-        const requestTimeRange: IRange<number> = {
-            from: timeToTimestamp(range.from),
-            to: timeToTimestamp(range.to),
-        };
-
-        // Check if we need data before the buffer
-        if (requestTimeRange.from < bufferTimeRange.from) {
-            const beforeRange = {
-                from: range.from,
-                to: bufferBounds.from,
-            };
-
-            const beforeData = await this._fetchData(beforeRange);
-            if (beforeData.length > 0) {
-                this._buffer.prepend(beforeData);
-            }
-        }
-
-        // Check if we need data after the buffer
-        if (requestTimeRange.to > bufferTimeRange.to) {
-            const afterRange = {
-                from: bufferBounds.to,
-                to: range.to,
-            };
-
-            const afterData = await this._fetchData(afterRange);
-            if (afterData.length > 0) {
-                this._buffer.append(afterData);
-            }
         }
     }
 
@@ -443,8 +430,19 @@ export class DataFeed<T extends TimeBasedData> {
      * dataFeed.unsubscribeFromDataUpdate();
      * ```
      */
-    public unsubscribeFromDataUpdate(): void {
+    public unsubscribeFromDataUpdates(): void {
         this._onDataUpdateCallback = null;
+    }
+
+    /**
+     * Notifies subscribers of range updates
+     *
+     * @private
+     */
+    private _notifyRangeUpdate(): void {
+        if (this._onNewRangeCallback) {
+            this._onNewRangeCallback();
+        }
     }
 
     /**
@@ -479,6 +477,17 @@ export class DataFeed<T extends TimeBasedData> {
      */
     public unsubscribeFromRangeUpdates(): void {
         this._onNewRangeCallback = null;
+    }
+
+    /**
+     * Notifies subscribers of loading state changes
+     *
+     * @private
+     */
+    private _notifyLoadingChange(): void {
+        if (this._onLoadingChangeCallback) {
+            this._onLoadingChangeCallback(this._isLoading);
+        }
     }
 
     /**
@@ -521,17 +530,6 @@ export class DataFeed<T extends TimeBasedData> {
      */
     public unsubscribeFromLoadingChanges(): void {
         this._onLoadingChangeCallback = null;
-    }
-
-    /**
-     * Notifies subscribers of range updates
-     *
-     * @private
-     */
-    private _notifyRangeUpdate(): void {
-        if (this._onNewRangeCallback) {
-            this._onNewRangeCallback();
-        }
     }
 
     /**
@@ -590,17 +588,6 @@ export class DataFeed<T extends TimeBasedData> {
         if (this._isLoading !== isLoading) {
             this._isLoading = isLoading;
             this._notifyLoadingChange();
-        }
-    }
-
-    /**
-     * Notifies subscribers of loading state changes
-     *
-     * @private
-     */
-    private _notifyLoadingChange(): void {
-        if (this._onLoadingChangeCallback) {
-            this._onLoadingChangeCallback(this._isLoading);
         }
     }
 

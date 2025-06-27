@@ -11,21 +11,19 @@ import { Strategy } from "@prisma/client";
 // }
 
 export default function StrategyCard({ strategy }: { strategy: Strategy }) {
-  return (
-    <div className="flex flex-col gap-4 p-4 w-full">
-      <Card key={strategy.id}>
-        <CardHeader>
-          <CardTitle>{strategy.name}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">
-            {strategy.description}
-          </p>
-          <p className="text-xs font-medium text-accent-foreground mt-2">
-            Engine: {strategy.engine}
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+    return (
+        <div className="flex flex-col gap-4 p-4 w-full">
+            <Card key={strategy.id}>
+                <CardHeader>
+                    <CardTitle>{strategy.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground text-sm">{strategy.description}</p>
+                    <p className="text-xs font-medium text-accent-foreground mt-2">
+                        Engine: {strategy.engine}
+                    </p>
+                </CardContent>
+            </Card>
+        </div>
+    );
 }

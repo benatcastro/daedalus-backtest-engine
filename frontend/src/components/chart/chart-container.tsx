@@ -211,61 +211,54 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>((props,
         chart
             .timeScale()
             .subscribeVisibleLogicalRangeChange((logicalRange: IRange<number> | null) => {
-
                 if (!logicalRange) {
                     return;
                 }
-                const dataFeeds = dataFeedEntriesRef.current
+                const dataFeeds = dataFeedEntriesRef.current;
                 if (!dataFeeds) {
-                    return
+                    return;
                 }
 
-                console.log(
-                    "ChartContainer: ",
-                    logicalRange,
-                );
+                console.log("ChartContainer: ", logicalRange);
 
                 dataFeeds.forEach((entry) => {
-                    if (entry.mutex.isLocked()) return
-                    if (!entry.onNewLogicalRangeCallback) return
+                    if (entry.mutex.isLocked()) return;
+                    if (!entry.onNewLogicalRangeCallback) return;
                     entry.mutex.acquire().then(async () => {
                         try {
                             if (entry.onNewLogicalRangeCallback) {
-                                await entry.onNewLogicalRangeCallback(logicalRange)
+                                await entry.onNewLogicalRangeCallback(logicalRange);
                             }
                         } finally {
                             entry.mutex.release();
                         }
                     });
-                })
+                });
             });
 
-        chart
-            .timeScale()
-            .subscribeVisibleTimeRangeChange((timeRange: IRange<Time> | null) => {
+        chart.timeScale().subscribeVisibleTimeRangeChange((timeRange: IRange<Time> | null) => {
+            if (!timeRange) {
+                return;
+            }
+            const dataFeeds = dataFeedEntriesRef.current;
+            if (!dataFeeds) {
+                return;
+            }
 
-                if (!timeRange) {
-                    return;
-                }
-                const dataFeeds = dataFeedEntriesRef.current
-                if (!dataFeeds) {
-                    return
-                }
-
-                dataFeeds.forEach((entry) => {
-                    if (entry.mutex.isLocked()) return
-                    if (!entry.onNewViewRangeCallback) return
-                    entry.mutex.acquire().then(async () => {
-                        try {
-                            if (entry.onNewViewRangeCallback) {
-                                await entry.onNewViewRangeCallback(timeRange)
-                            }
-                        } finally {
-                            entry.mutex.release();
+            dataFeeds.forEach((entry) => {
+                if (entry.mutex.isLocked()) return;
+                if (!entry.onNewViewRangeCallback) return;
+                entry.mutex.acquire().then(async () => {
+                    try {
+                        if (entry.onNewViewRangeCallback) {
+                            await entry.onNewViewRangeCallback(timeRange);
                         }
-                    });
-                })
+                    } finally {
+                        entry.mutex.release();
+                    }
+                });
             });
+        });
         window.addEventListener("resize", handleResize);
 
         return () => {

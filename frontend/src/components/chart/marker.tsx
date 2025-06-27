@@ -1,54 +1,86 @@
-import { forwardRef, useContext, useEffect } from "react"
-import { SeriesContext } from "@/components/chart/series"
-import { TimeRangeDataFeed, TimeBasedData } from "@/lib/data-feed"
-import { createSeriesMarkers, SeriesMarker, Time,  } from "lightweight-charts"
-import { useChartContext } from "@/hooks/useChartContext"
-import { useSeriesContext } from "@/hooks/useSeriesContext"
+import { forwardRef, useContext, useEffect, useRef } from "react";
+import { SeriesContext } from "@/components/chart/series";
+import {
+    createSeriesMarkers,
+    IRange,
+    ISeriesMarkersPluginApi,
+    SeriesMarker,
+    Time,
+} from "lightweight-charts";
+import { DataFeed } from "@/lib/data-feed";
+import { useChartContext } from "@/hooks/useChartContext";
+import { useSeriesContext } from "@/hooks/useSeriesContext";
+import { timeToTimestamp } from "@/lib/time-utils";
 
-export interface MarkerHandle {
-
-}
+export interface MarkerHandle {}
 
 interface MarkerProps {
-    markers?: any[]
-    dataFeed?: TimeRangeDataFeed<SeriesMarker<Time>>
-    type: "order"
+    dataFeed?: DataFeed<SeriesMarker<Time>>;
+    type: "order";
 }
 
-export const Marker = forwardRef<MarkerHandle, MarkerProps>(({markers, dataFeed}, ref) => {
-    const seriesContext = useSeriesContext()
-    const chartContext = useChartContext()
-
-    const series = seriesContext.api()
+export const Marker = forwardRef<MarkerHandle, MarkerProps>(({ dataFeed }, ref) => {
+    const seriesContext = useSeriesContext();
+    const chartContext = useChartContext();
+    const markersRef = useRef<ISeriesMarkersPluginApi<Time>>(null);
 
     useEffect(() => {
-        console.log("Creating marker")
-        if (dataFeed) {
-            console.log("Adding marker datafeed")
-            chartContext.addDataFeed(dataFeed)
-            if (series) {
-                console.log("Initial Markers: ", dataFeed.data.data)
-                createSeriesMarkers(seriesContext.api(), dataFeed.data.data)
-            }
-            dataFeed.subscribeToDataUpdates((markers) => {
-                if (series && markers) {
-                    console.log("Markers: ", markers)
-                    createSeriesMarkers(series, markers)
-                }
-            })
-        }
+        const series = seriesContext.api();
+        if (!series) return;
+
+        console.log("Marker: Creating ");
+        markersRef.current = createSeriesMarkers(series);
+
+        console.log("Marker Cleanup");
         return () => {
-            console.log("Marker Cleanup")
-            if (dataFeed) {
-                chartContext.removeDataFeed(dataFeed)
-                dataFeed.unsubscribeToDataUpdates()
-            }
+            markersRef.current?.detach();
+            markersRef.current = null;
+        };
+    }, [seriesContext._api]);
+
+    useEffect(() => {
+        if (!markersRef.current || !dataFeed) return;
+        if (!chartContext.initialRange) {
+            throw Error("datafeeds needs a initial range");
         }
 
-    }, [dataFeed])
+        console.log("Marker: Adding marker datafeed");
+        chartContext.addDataFeed({
+            dataFeed: dataFeed,
+            onNewViewRangeCallback: async (viewRange: IRange<Time>) => {
+                // check backwards
+                const firstMarkerTime = timeToTimestamp(dataFeed.data[0].time);
+                console.log("Marker: view: ", viewRange, " firstMarker: ", firstMarkerTime);
+                const diff = timeToTimestamp(viewRange.from) - firstMarkerTime;
+                if (diff < 5000) {
+                    await dataFeed.loadChunkBackward();
+                }
+            },
+        });
+        dataFeed.subscribeToRangeUpdates(() => {
+            if (markersRef.current) {
+                console.log("Marker: initializing: ", dataFeed.data);
+                markersRef.current.setMarkers(dataFeed.data);
+            }
+        });
 
+        if (!dataFeed.isLoading) {
+            dataFeed.setRange(chartContext.initialRange);
+        }
 
+        dataFeed.subscribeToDataUpdates((markers) => {
+            if (markersRef.current && markers) {
+                console.log("Marker: Updating: ", markers);
+                markersRef.current.setMarkers(markers);
+            }
+        });
+        return () => {
+            console.log("Marker Datafeed Cleanup");
+            if (dataFeed) {
+                chartContext.removeDataFeed(dataFeed);
+            }
+        };
+    }, [dataFeed]);
 
-
-    return null
-})
+    return null;
+});

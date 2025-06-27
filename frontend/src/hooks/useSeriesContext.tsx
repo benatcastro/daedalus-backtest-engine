@@ -1,5 +1,5 @@
-import { useContext } from 'react';
-import { SeriesContext } from '@/components/chart/series';
+import { useContext } from "react";
+import { SeriesContext } from "@/components/chart/series";
 
 /**
  * Custom hook to access chart context functionality
@@ -8,11 +8,11 @@ import { SeriesContext } from '@/components/chart/series';
  * @throws Error when used outside of a ChartContext provider
  */
 export function useSeriesContext() {
-  const context = useContext(SeriesContext);
+    const context = useContext(SeriesContext);
 
-  if (context === undefined || context === null) {
-    throw new Error('useSeries must be used within a Series component');
-  }
+    if (context === undefined || context === null) {
+        throw new Error("useSeries must be used within a Series component");
+    }
 
-  return context;
+    return context;
 }
