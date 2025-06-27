@@ -41,7 +41,7 @@ export const Marker = forwardRef<MarkerHandle, MarkerProps>(({ dataFeed }, ref) 
     useEffect(() => {
         if (!markersRef.current || !dataFeed) return;
         if (!chartContext.initialRange) {
-            throw Error("datafeeds needs a initial range");
+            throw Error("DataFeed requires an initial view range");
         }
 
         console.log("Marker: Adding marker datafeed");
