@@ -1,13 +1,13 @@
 import { Strategy } from "@prisma/client";
 
 interface StrategySettingsProps {
-  strategy: Strategy;
+    strategy: Strategy;
 }
 
 export default function StrategySettings({ strategy }: StrategySettingsProps) {
-  return (
-    <>
-      <h3>Settings page for {strategy.name}</h3>
-    </>
-  );
+    return (
+        <>
+            <h3>Settings page for {strategy.name}</h3>
+        </>
+    );
 }

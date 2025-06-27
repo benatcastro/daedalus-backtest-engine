@@ -1,5 +1,5 @@
-import { useContext } from 'react';
-import { ChartContext } from '@/components/chart/chart-container';
+import { useContext } from "react";
+import { ChartContext } from "@/components/chart/chart-container";
 
 /**
  * Custom hook to access chart context functionality
@@ -8,11 +8,11 @@ import { ChartContext } from '@/components/chart/chart-container';
  * @throws Error when used outside of a ChartContext provider
  */
 export function useChartContext() {
-  const context = useContext(ChartContext);
+    const context = useContext(ChartContext);
 
-  if (context === undefined || context === null) {
-    throw new Error('useChart must be used within a Chart component');
-  }
+    if (context === undefined || context === null) {
+        throw new Error("useChart must be used within a Chart component");
+    }
 
-  return context;
+    return context;
 }

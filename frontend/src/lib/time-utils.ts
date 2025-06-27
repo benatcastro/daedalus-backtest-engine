@@ -6,21 +6,21 @@ import { IRange, Time } from "lightweight-charts";
  * @returns The corresponding timestamp in milliseconds
  */
 export function timeToTimestamp(time: Time): number {
-  if (typeof time === 'number') {
-    // Assume time is UNIX timestamp in seconds
-    return time;
-  }
-  if (typeof time === 'string') {
-    // Parse ISO date string
-    return new Date(time).getTime();
-  }
-  if (typeof time === 'object' && time !== null) {
-    // BusinessDay or similar object
-    const { year, month, day } = time;
-    // month is 1-based in LightweightCharts, JS Date uses 0-based month
-    return new Date(year, month - 1, day).getTime();
-  }
-  throw new Error('Unsupported time format');
+    if (typeof time === "number") {
+        // Assume time is UNIX timestamp in seconds
+        return time;
+    }
+    if (typeof time === "string") {
+        // Parse ISO date string
+        return new Date(time).getTime();
+    }
+    if (typeof time === "object" && time !== null) {
+        // BusinessDay or similar object
+        const { year, month, day } = time;
+        // month is 1-based in LightweightCharts, JS Date uses 0-based month
+        return new Date(year, month - 1, day).getTime();
+    }
+    throw new Error("Unsupported time format");
 }
 
 /**
@@ -29,8 +29,8 @@ export function timeToTimestamp(time: Time): number {
  * @returns Time object for Lightweight Charts (Unix timestamp in seconds)
  */
 export function dateToTime(date: Date): Time {
-  // Convert milliseconds to seconds and cast to Time
-  return (Math.floor(date.getTime() / 1000)) as Time;
+    // Convert milliseconds to seconds and cast to Time
+    return Math.floor(date.getTime() / 1000) as Time;
 }
 
 /**
@@ -39,10 +39,10 @@ export function dateToTime(date: Date): Time {
  * @returns Range with Lightweight Charts Time objects (Unix timestamps in seconds)
  */
 export function dateRangeToTimeRange(dateRange: IRange<Date>): IRange<Time> {
-  return {
-    from: dateToTime(dateRange.from),
-    to: dateToTime(dateRange.to)
-  };
+    return {
+        from: dateToTime(dateRange.from),
+        to: dateToTime(dateRange.to),
+    };
 }
 
 /**
@@ -51,15 +51,9 @@ export function dateRangeToTimeRange(dateRange: IRange<Date>): IRange<Time> {
  * @param endDateString - ISO date string from backtest
  * @returns IRange<Date> object
  */
-export function isoTimeToDateRange(
-  startDateString: string,
-  endDateString: string,
-): IRange<Date> {
-  return {
-    from: new Date(startDateString),
-    to: new Date(endDateString),
-  };
+export function isoTimeToDateRange(startDateString: string, endDateString: string): IRange<Date> {
+    return {
+        from: new Date(startDateString),
+        to: new Date(endDateString),
+    };
 }
-
-
-

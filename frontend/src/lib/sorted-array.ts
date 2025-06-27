@@ -55,7 +55,7 @@ export class TimeSortedArray implements SortedArray<TimeBasedData> {
      */
     prepend(sorted: TimeBasedData[]): number {
         const inputCopy = [...sorted];
-        console.log("TimeSortedArray: prepending: ", sorted.length, " items");
+        console.log("TimeSortedArray: prepending input: ", sorted.length, " items");
 
         if (sorted.length === 0) return 0;
         if (this._data.length === 0) {
@@ -66,6 +66,7 @@ export class TimeSortedArray implements SortedArray<TimeBasedData> {
         // Find the first index in sorted where the timestamp is greater than the earliest in this.data
         const earliestTime = this._data[0].time;
         const endIdx = this.findLastIndexBefore(inputCopy, earliestTime);
+        if (endIdx === -1) return 0;
         if (inputCopy[endIdx].time >= this._data[0].time) {
             throw Error("The preprending last item's time is greater than data[0].time");
         }
@@ -78,6 +79,7 @@ export class TimeSortedArray implements SortedArray<TimeBasedData> {
             this._data = [...toInsert, ...this._data];
         }
 
+        console.log("TimeSortedArray: prepended: ", toInsert.length);
         return toInsert.length;
     }
 
@@ -114,43 +116,43 @@ export class TimeSortedArray implements SortedArray<TimeBasedData> {
         return toInsert.length;
     }
 
-/**
- * Finds the index of the largest element with time strictly less than the given time.
- * Useful for finding the closest data point before a specific timestamp.
- *
- * @param sorted Array of TimeBasedData, sorted in ascending order by time.
- * @param time The time to compare against.
- * @returns The index of the largest element with time < given time, or -1 if not found.
- */
-private findLastIndexBefore(sorted: TimeBasedData[], time: Time): number {
-    const timeStamp = timeToTimestamp(time);
-    let low = 0,
-        high = sorted.length - 1;
+    /**
+     * Finds the index of the largest element with time strictly less than the given time.
+     * Useful for finding the closest data point before a specific timestamp.
+     *
+     * @param sorted Array of TimeBasedData, sorted in ascending order by time.
+     * @param time The time to compare against.
+     * @returns The index of the largest element with time < given time, or -1 if not found.
+     */
+    private findLastIndexBefore(sorted: TimeBasedData[], time: Time): number {
+        const timeStamp = timeToTimestamp(time);
+        let low = 0,
+            high = sorted.length - 1;
 
-    // If array is empty or all elements are after or equal to the target time
-    if (sorted.length === 0 || timeToTimestamp(sorted[0].time) >= timeStamp) {
-        return -1;
-    }
-
-    // If all elements are strictly before the target time
-    if (timeToTimestamp(sorted[high].time) < timeStamp) {
-        return high;
-    }
-
-    // Binary search to find the largest element < target
-    while (low < high) {
-        // Use ceiling division to avoid infinite loop when low+1=high
-        const mid = Math.floor((low + high + 1) / 2);
-
-        if (timeToTimestamp(sorted[mid].time) < timeStamp) {
-            low = mid; // This element is a candidate
-        } else {
-            high = mid - 1; // Look in the lower half
+        // If array is empty or all elements are after or equal to the target time
+        if (sorted.length === 0 || timeToTimestamp(sorted[0].time) >= timeStamp) {
+            return -1;
         }
-    }
 
-    return low;
-}
+        // If all elements are strictly before the target time
+        if (timeToTimestamp(sorted[high].time) < timeStamp) {
+            return high;
+        }
+
+        // Binary search to find the largest element < target
+        while (low < high) {
+            // Use ceiling division to avoid infinite loop when low+1=high
+            const mid = Math.floor((low + high + 1) / 2);
+
+            if (timeToTimestamp(sorted[mid].time) < timeStamp) {
+                low = mid; // This element is a candidate
+            } else {
+                high = mid - 1; // Look in the lower half
+            }
+        }
+
+        return low;
+    }
     /**
      * Finds the first index in a sorted array where the time is after the given time.
      *

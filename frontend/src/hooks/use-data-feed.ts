@@ -47,49 +47,41 @@ import { useEffect, useMemo, useState } from "react";
  * ```
  */
 export function useDataFeed<T extends TimeBasedData>(
-  dataBounds: IRange<Time>,
-  dataFetcher: (range: IRange<Time>) => Promise<T[]>
+    dataBounds: IRange<Time>,
+    dataFetcher: (start?: Time, end?: Time, entries?: Number) => Promise<T[]>,
+    config?: Partial<DataFeedConfig>,
 ) {
-  // State to track the loading status of the data feed
-  const [isLoading, setIsLoading] = useState(true);
+    // State to track the loading status of the data feed
+    const [isLoading, setIsLoading] = useState(true);
 
-  /**
-   * Create the data feed instance with memoization to ensure it's only
-   * created once for the same dataBounds and dataFetcher
-   */
-  const dataFeed = useMemo(() => {
-    // Define a custom configuration for the data feed with larger chunk size
-    // and longer fetch attempt time than the defaults
-    const config: DataFeedConfig = {
-      chunk_size: 1000,
-      max_chunk_attempts: 5,
-      fetch_attempt_time: 30000
-    };
+    /**
+     * Create the data feed instance with memoization to ensure it's only
+     * created once for the same dataBounds and dataFetcher
+     */
+    const dataFeed = useMemo(() => {
+        // Define a custom configuration for the data feed with larger chunk size
+        // and longer fetch attempt time than the defaults
 
-    // Create and return a new DataFeed instance
-    return (new DataFeed<T>(
-      dataFetcher,
-      dataBounds,
-      config
-    ));
-  }, [dataFetcher, dataBounds]);
+        // Create and return a new DataFeed instance
+        return new DataFeed<T>(dataFetcher, dataBounds, config);
+    }, [dataFetcher, dataBounds]);
 
-  /**
-   * Set up an effect to subscribe to loading state changes from the data feed
-   * This will update our local loading state whenever the data feed's loading state changes
-   */
-  useEffect(() => {
-    if (!dataFeed) return;
+    /**
+     * Set up an effect to subscribe to loading state changes from the data feed
+     * This will update our local loading state whenever the data feed's loading state changes
+     */
+    useEffect(() => {
+        if (!dataFeed) return;
 
-    // Subscribe to loading state changes
-    dataFeed.subscribeToLoadingChanges(setIsLoading);
+        // Subscribe to loading state changes
+        dataFeed.subscribeToLoadingChanges(setIsLoading);
 
-    // Cleanup function to unsubscribe when the component unmounts
-    return () => {
-      dataFeed.unsubscribeFromLoadingChanges();
-    };
-  }, [dataFeed]); // Re-run effect if dataFeed changes
+        // Cleanup function to unsubscribe when the component unmounts
+        return () => {
+            dataFeed.unsubscribeFromLoadingChanges();
+        };
+    }, [dataFeed]); // Re-run effect if dataFeed changes
 
-  // Return the data feed instance and loading state as a tuple
-  return [dataFeed, isLoading] as const;
+    // Return the data feed instance and loading state as a tuple
+    return [dataFeed, isLoading] as const;
 }
