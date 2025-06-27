@@ -166,7 +166,7 @@ export const ChartContainer = forwardRef<IChartApi, ChartContainerProps>((props,
             onNewLogicalRangeCallback?: (logicalRange: IRange<number>) => Promise<void>;
         }) {
             if (!onNewLogicalRangeCallback && !onNewViewRangeCallback) {
-                throw Error("There must be atleast 1 callback");
+                throw Error("There must be at least 1 callback");
             }
             const mutex = new Mutex();
             dataFeedEntriesRef.current.push({
