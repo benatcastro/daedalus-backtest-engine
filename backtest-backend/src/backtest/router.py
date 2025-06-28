@@ -1,14 +1,13 @@
 import time
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from datetime import datetime, timedelta
-from schemas.backtest import OrderRead
+from backtest.schemas import OrderRead, BacktestCreate, BacktestRead
 from sqlalchemy import and_
 
 # from backtest.lean.LeanBacktestSaver import *
 from database import get_db
 from sqlalchemy.orm import Session
-from schemas.backtest import BacktestCreate, BacktestRead
-from models import Backtest
+from backtest.models import BacktestModel
 from typing import List, Optional
 from backtest.BacktestEngine import BacktestEngine
 from backtest.BacktestSaver import BacktestSaver
@@ -18,7 +17,7 @@ from backtest.Exceptions import (
     BacktestDataException,
 )
 from logger import logger
-from models import Order
+from backtest.models import OrderModel
 from backtest.Candle import Candle
 
 router = APIRouter(prefix="/backtest")
@@ -31,7 +30,7 @@ router = APIRouter(prefix="/backtest")
 @router.get("/{backtest_id}/symbols/")
 async def get_symbols(backtest_id: int, db: Session = Depends(get_db)):
     # Retrieve the backtest by the provided ID.
-    backtest = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+    backtest = db.query(BacktestModel).filter(BacktestModel.id == backtest_id).first()
 
     # Check that the backtest exists
     if not backtest:
@@ -79,7 +78,7 @@ async def get_candles(
         )
 
     # Retrieve the backtest by the provided ID.
-    backtest = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+    backtest = db.query(BacktestModel).filter(BacktestModel.id == backtest_id).first()
 
     # Check that the backtest exists
     if not backtest:
@@ -173,7 +172,7 @@ async def get_backtest_orders(
         )
 
     # Verify the backtest exists
-    backtest = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+    backtest = db.query(BacktestModel).filter(BacktestModel.id == backtest_id).first()
     if not backtest:
         raise HTTPException(
             status_code=404, detail=f"Backtest with ID {backtest_id} not found"
@@ -185,11 +184,11 @@ async def get_backtest_orders(
             start_date = datetime.fromtimestamp(start)
             end_date = datetime.fromtimestamp(end)
 
-            query = db.query(Order).filter(
+            query = db.query(OrderModel).filter(
                 and_(
-                    Order.backtest_id == backtest_id,
-                    Order.time >= start_date,
-                    Order.time <= end_date,
+                    OrderModel.backtest_id == backtest_id,
+                    OrderModel.time >= start_date,
+                    OrderModel.time <= end_date,
                 )
             )
 
@@ -204,14 +203,14 @@ async def get_backtest_orders(
             # Query orders before the end date, ordered by time descending (newest first)
             # Limit to entries requested
             query = (
-                db.query(Order)
+                db.query(OrderModel)
                 .filter(
                     and_(
-                        Order.backtest_id == backtest_id,
-                        Order.time <= end_date,
+                        OrderModel.backtest_id == backtest_id,
+                        OrderModel.time <= end_date,
                     )
                 )
-                .order_by(Order.time.desc())
+                .order_by(OrderModel.time.desc())
                 .limit(entries)
             )
 
@@ -227,14 +226,14 @@ async def get_backtest_orders(
             # Query orders after the start date, ordered by time ascending
             # Limit to entries requested
             query = (
-                db.query(Order)
+                db.query(OrderModel)
                 .filter(
                     and_(
-                        Order.backtest_id == backtest_id,
-                        Order.time >= start_date,
+                        OrderModel.backtest_id == backtest_id,
+                        OrderModel.time >= start_date,
                     )
                 )
-                .order_by(Order.time.desc())
+                .order_by(OrderModel.time.desc())
                 .limit(entries)
             )
 
@@ -285,7 +284,7 @@ async def upload_backtest(
     )
 
     # Create SQLAlchemy model instance from validated data
-    new_backtest = Backtest(**backtest_data.model_dump())
+    new_backtest = BacktestModel(**backtest_data.model_dump())
 
     # Add to the session
     db.add(new_backtest)
@@ -301,7 +300,7 @@ async def upload_backtest(
     for order in saver.orders:
         order_dict = order.model_dump()
         order_dict["backtest_id"] = new_backtest.id
-        orm_order = Order(**order_dict)
+        orm_order = OrderModel(**order_dict)
         orm_orders.append(orm_order)
 
     # Save the orders
@@ -317,12 +316,12 @@ async def upload_backtest(
 # Retrieve one backtests of a strategy
 @router.get("/details/{backtest_id}", response_model=BacktestRead)
 async def get_one_backtest(backtest_id: int, db: Session = Depends(get_db)):
-    backtests = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+    backtests = db.query(BacktestModel).filter(BacktestModel.id == backtest_id).first()
     return backtests
 
 
 # Retrieve all backtests of a strategy
 @router.get("/{strategy_id}", response_model=List[BacktestRead])
 async def get_backtests_by_strategy(strategy_id: int, db: Session = Depends(get_db)):
-    backtests = db.query(Backtest).filter(Backtest.strategy_id == strategy_id).all()
+    backtests = db.query(BacktestModel).filter(BacktestModel.strategy_id == strategy_id).all()
     return backtests

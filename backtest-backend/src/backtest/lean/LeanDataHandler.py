@@ -13,7 +13,7 @@ import zipfile
 from config import settings
 from logger import logger
 from datetime import datetime
-from models import Backtest
+from backtest.models import BacktestModel
 from backtest.Candle import Candle
 from typing import List, Optional, Dict
 from backtest.DataHandler import DataHandler
@@ -36,7 +36,7 @@ class LeanDataHandler(DataHandler):
     and provides basic validation for data requests.
     """
 
-    def __init__(self, backtest: Backtest):
+    def __init__(self, backtest: BacktestModel):
         """Initialize the Lean DataHandler."""
         self._backtest: LeanBacktest = LeanBacktest.from_backtest_model(backtest)
         logger.debug(f"Initialized LeanDataHandler for backtest {backtest.id}")
