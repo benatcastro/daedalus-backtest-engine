@@ -31,41 +31,6 @@ class TimestampMixin:
             DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
         )
 
-
-class Backtest(Base, TimestampMixin):
-    __tablename__ = "backtests"
-
-    id = Column(Integer, primary_key=True)
-    strategy_id = Column(Integer)
-    name = Column(String(255), nullable=False)
-    description = Column(Text)
-    starting_date = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-    ending_date = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-    engine = Column(Enum(BacktestEngine))
-    parameters = Column(JSON)
-
-    # Relationship
-    orders = relationship(
-        "Order", back_populates="backtest", cascade="all, delete-orphan"
-    )
-
-
-class Order(Base, TimestampMixin):
-    __tablename__ = "orders"
-
-    id = Column(Integer, primary_key=True)
-    backtest_id = Column(Integer, ForeignKey("backtests.id"), nullable=False)
-    engine = Column(Enum(BacktestEngine), nullable=False)
-    order_id = Column(String, nullable=False)
-    time = Column(DateTime, nullable=False)
-    symbol = Column(String, nullable=False)
-    side = Column(String, nullable=False)
-    quantity = Column(Float, nullable=False)
-    status = Column(String, nullable=False)
-    parameters = Column(JSON, default=dict)
-
-    backtest = relationship("Backtest", back_populates="orders")
+class BaseModel(Base, TimestampMixin):
+    """Abstract base model with timestamp functionality"""
+    __abstract__ = True

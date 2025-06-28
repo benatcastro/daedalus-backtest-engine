@@ -7,7 +7,7 @@ and extensibility.
 """
 
 from typing import Dict, Type
-from models import Backtest
+from backtest.models import BacktestModel
 from backtest.BacktestEngine import BacktestEngine
 from backtest.DataHandler import DataHandler
 from backtest.lean.LeanDataHandler import LeanDataHandler
@@ -26,7 +26,7 @@ class DataHandlerFactory:
     }
 
     @classmethod
-    def create_handler(cls, backtest: Backtest) -> DataHandler:
+    def create_handler(cls, backtest: BacktestModel) -> DataHandler:
         """
         Create a DataHandler instance for the given backtest.
 
