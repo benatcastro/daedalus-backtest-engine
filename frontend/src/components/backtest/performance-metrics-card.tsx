@@ -1,12 +1,6 @@
 "use client";
 
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface PerformanceData {
     totalProfitLoss: string;
@@ -31,10 +25,15 @@ export function PerformanceMetricsCard({
     performanceData,
     title = "Performance Metrics",
     description = "Key trading statistics and risk metrics",
-    className
+    className = "",
 }: PerformanceMetricsCardProps) {
     return (
-<>
+        <Card className={className}>
+            <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                <CardDescription className="text-xs">{description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
                 {/* P&L Section */}
                 <div className="space-y-2">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -43,12 +42,15 @@ export function PerformanceMetricsCard({
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
                             <p className="text-xs text-muted-foreground">Total P&L</p>
-                            <p className={`text-lg font-bold ${
-                                parseFloat(performanceData.totalProfitLoss) >= 0
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                            }`}>
-                                {parseFloat(performanceData.totalProfitLoss) >= 0 ? '+' : ''}{performanceData.totalProfitLoss}
+                            <p
+                                className={`text-lg font-bold ${
+                                    parseFloat(performanceData.totalProfitLoss) >= 0
+                                        ? "text-green-600"
+                                        : "text-red-600"
+                                }`}
+                            >
+                                {parseFloat(performanceData.totalProfitLoss) >= 0 ? "+" : ""}
+                                {performanceData.totalProfitLoss}
                             </p>
                         </div>
                         <div className="space-y-1">
@@ -122,17 +124,20 @@ export function PerformanceMetricsCard({
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-xs text-muted-foreground">Avg Trade:</span>
-                            <span className={`text-sm font-medium ${
-                                parseFloat(performanceData.averageProfitLoss) >= 0
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                            }`}>
-                                {parseFloat(performanceData.averageProfitLoss) >= 0 ? '+' : ''}{performanceData.averageProfitLoss}
+                            <span
+                                className={`text-sm font-medium ${
+                                    parseFloat(performanceData.averageProfitLoss) >= 0
+                                        ? "text-green-600"
+                                        : "text-red-600"
+                                }`}
+                            >
+                                {parseFloat(performanceData.averageProfitLoss) >= 0 ? "+" : ""}
+                                {performanceData.averageProfitLoss}
                             </span>
                         </div>
                     </div>
                 </div>
-
-</>
+            </CardContent>
+        </Card>
     );
 }

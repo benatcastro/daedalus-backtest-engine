@@ -184,51 +184,33 @@ export function BacktestResults({ strategy, backtest }: BacktestResultsProps) {
     ];
 
     return (
-        <div className="flex flex-col flex-wrap p-4 gap-4">
-
-            <div ref={mainRef} className="grid grid-rows-3 md:grid-rows-2 lg:flex lg:flex-wrap gap-4">
+        <div className="flex flex-col p-4 gap-4">
+            <div ref={mainRef} className="flex flex-col lg:flex-row gap-4">
                 {/* Main Chart - Equity Curve & Price */}
-                <Card className="sm:min-w-12 lg:min-w-2xl grow basis-1/3">
+                <Card className="w-full lg:flex-1 lg:min-w-0">
                     <CardHeader className="py-3">
                         <CardTitle>Equity Curve & Price</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-80 relative">
+                    <CardContent className="h-60 sm:h-80 relative">
                         <Chart layout={{ background: { color: "transparent" } }}>
-                            <h1 className="absolute top-4 left-4 z-10 text-3xl font-bold text-green-600">+2.43%</h1>
+                            <h1 className="absolute top-4 left-4 z-10 text-3xl font-bold text-green-600">
+                                +2.43%
+                            </h1>
                             {equityData ? (
                                 <Series type="line" data={equityData}></Series>
                             ) : undefined}
                         </Chart>
                     </CardContent>
                 </Card>
-        <Card className="grow ">
-            <CardHeader >
-                <CardTitle className="text-sm font-medium">Performance Metrics</CardTitle>
-                <CardDescription className="text-xs">
-                    "Key trading statistics and risk metrics"
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
 
-                <PerformanceMetricsCard className="" performanceData={performanceData} />
-            </CardContent>
                 {/* Key Performance Metrics Card */}
-                </Card>
-
-        <Card className="grow ">
-            <CardHeader >
-                <CardTitle className="text-sm font-medium">Performance Metrics</CardTitle>
-                <CardDescription className="text-xs">
-                    "Key trading statistics and risk metrics"
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-
-                <PerformanceMetricsCard className="" performanceData={performanceData} />
-            </CardContent>
+                <div className="w-full lg:w-80 lg:flex-shrink-0">
+                    <PerformanceMetricsCard className="h-full" performanceData={performanceData} />
+                </div>
                 {/* Key Performance Metrics Card */}
-                </Card>
-
+                <div className="w-full lg:w-80 lg:flex-shrink-0">
+                    <PerformanceMetricsCard className="h-full" performanceData={performanceData} />
+                </div>
             </div>
 
             <div ref={ordersRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -300,20 +282,36 @@ export function BacktestResults({ strategy, backtest }: BacktestResultsProps) {
                             </h4>
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Total Trades</span>
-                                    <span className="text-sm font-semibold">{performanceData.totalNumberOfTrades}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Total Trades
+                                    </span>
+                                    <span className="text-sm font-semibold">
+                                        {performanceData.totalNumberOfTrades}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Winning Trades</span>
-                                    <span className="text-sm font-semibold text-green-600">{performanceData.numberOfWinningTrades}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Winning Trades
+                                    </span>
+                                    <span className="text-sm font-semibold text-green-600">
+                                        {performanceData.numberOfWinningTrades}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Losing Trades</span>
-                                    <span className="text-sm font-semibold text-red-600">{performanceData.numberOfLosingTrades}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Losing Trades
+                                    </span>
+                                    <span className="text-sm font-semibold text-red-600">
+                                        {performanceData.numberOfLosingTrades}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Win/Loss Ratio</span>
-                                    <span className="text-sm font-semibold">{parseFloat(performanceData.winLossRatio).toFixed(2)}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Win/Loss Ratio
+                                    </span>
+                                    <span className="text-sm font-semibold">
+                                        {parseFloat(performanceData.winLossRatio).toFixed(2)}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -325,20 +323,36 @@ export function BacktestResults({ strategy, backtest }: BacktestResultsProps) {
                             </h4>
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Total Profit</span>
-                                    <span className="text-sm font-semibold text-green-600">+{performanceData.totalProfit}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Total Profit
+                                    </span>
+                                    <span className="text-sm font-semibold text-green-600">
+                                        +{performanceData.totalProfit}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Total Loss</span>
-                                    <span className="text-sm font-semibold text-red-600">{performanceData.totalLoss}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Total Loss
+                                    </span>
+                                    <span className="text-sm font-semibold text-red-600">
+                                        {performanceData.totalLoss}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Avg Winning Trade</span>
-                                    <span className="text-sm font-semibold text-green-600">+{performanceData.averageProfit}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Avg Winning Trade
+                                    </span>
+                                    <span className="text-sm font-semibold text-green-600">
+                                        +{performanceData.averageProfit}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Avg Losing Trade</span>
-                                    <span className="text-sm font-semibold text-red-600">{performanceData.averageLoss}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Avg Losing Trade
+                                    </span>
+                                    <span className="text-sm font-semibold text-red-600">
+                                        {performanceData.averageLoss}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -350,20 +364,38 @@ export function BacktestResults({ strategy, backtest }: BacktestResultsProps) {
                             </h4>
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Sharpe Ratio</span>
-                                    <span className="text-sm font-semibold">{parseFloat(performanceData.sharpeRatio).toFixed(3)}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Sharpe Ratio
+                                    </span>
+                                    <span className="text-sm font-semibold">
+                                        {parseFloat(performanceData.sharpeRatio).toFixed(3)}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Sortino Ratio</span>
-                                    <span className="text-sm font-semibold">{parseFloat(performanceData.sortinoRatio).toFixed(3)}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Sortino Ratio
+                                    </span>
+                                    <span className="text-sm font-semibold">
+                                        {parseFloat(performanceData.sortinoRatio).toFixed(3)}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Max Drawdown</span>
-                                    <span className="text-sm font-semibold text-red-600">{performanceData.maximumClosedTradeDrawdown}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Max Drawdown
+                                    </span>
+                                    <span className="text-sm font-semibold text-red-600">
+                                        {performanceData.maximumClosedTradeDrawdown}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Volatility</span>
-                                    <span className="text-sm font-semibold">{parseFloat(performanceData.profitLossStandardDeviation).toFixed(3)}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Volatility
+                                    </span>
+                                    <span className="text-sm font-semibold">
+                                        {parseFloat(
+                                            performanceData.profitLossStandardDeviation,
+                                        ).toFixed(3)}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -375,20 +407,36 @@ export function BacktestResults({ strategy, backtest }: BacktestResultsProps) {
                             </h4>
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Max Consecutive Wins</span>
-                                    <span className="text-sm font-semibold text-green-600">{performanceData.maxConsecutiveWinningTrades}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Max Consecutive Wins
+                                    </span>
+                                    <span className="text-sm font-semibold text-green-600">
+                                        {performanceData.maxConsecutiveWinningTrades}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Max Consecutive Losses</span>
-                                    <span className="text-sm font-semibold text-red-600">{performanceData.maxConsecutiveLosingTrades}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Max Consecutive Losses
+                                    </span>
+                                    <span className="text-sm font-semibold text-red-600">
+                                        {performanceData.maxConsecutiveLosingTrades}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Avg Trade Duration</span>
-                                    <span className="text-sm font-semibold">{performanceData.averageTradeDuration.split('.')[0]}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Avg Trade Duration
+                                    </span>
+                                    <span className="text-sm font-semibold">
+                                        {performanceData.averageTradeDuration.split(".")[0]}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Total Fees</span>
-                                    <span className="text-sm font-semibold text-orange-600">{performanceData.totalFees}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        Total Fees
+                                    </span>
+                                    <span className="text-sm font-semibold text-orange-600">
+                                        {performanceData.totalFees}
+                                    </span>
                                 </div>
                             </div>
                         </div>

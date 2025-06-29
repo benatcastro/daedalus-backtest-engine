@@ -4,6 +4,8 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Strategy } from "@prisma/client";
 import { BacktestList } from "@/components/strategy/backtest-list";
+import { useAppContext } from "@/contexts/app-context";
+import { useEffect } from "react";
 
 interface Props {
     params: {
@@ -23,6 +25,7 @@ export default function Page({ params }: Props) {
     const { id } = useParams();
     const searchParams = useSearchParams();
     const selectedTab = searchParams.get(TAB_PARAM) || DEFAULT_TAB;
+    const app = useAppContext();
 
     // Fetch strategy
     const {
@@ -30,6 +33,11 @@ export default function Page({ params }: Props) {
         error: strategyError,
         isLoading: isStrategyLoading,
     } = useSWR<Strategy>(`/api/strategies/${id}/`);
+
+    useEffect(() => {
+        if (!strategy) return;
+        app.setStrategy(strategy);
+    }, [strategy]);
 
     if (isStrategyLoading) {
         return (

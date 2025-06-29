@@ -150,7 +150,10 @@ export function BacktestList({ strategy }: BacktestListProps) {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="text-sm">
-                                                    {formatDateRange(bt.starting_date, bt.ending_date)}
+                                                    {formatDateRange(
+                                                        bt.starting_date,
+                                                        bt.ending_date,
+                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
