@@ -54,5 +54,5 @@ export interface Order {
      * Additional order parameters and metadata
      * Can contain any JSON data specific to the trading engine
      */
-    parameters: Record<string, unknown>;
+    parameters: Record<string, string>;
 }

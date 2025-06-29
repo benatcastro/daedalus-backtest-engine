@@ -26,7 +26,7 @@ export default function Chart(props: ChartProps) {
         <div
             ref={handleRef}
             style={{
-                width: props.width || "100%",
+                width: "100%",
                 height: "100%",
             }}
         >

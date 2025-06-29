@@ -12,6 +12,7 @@ import {
     LineSeries,
     AreaSeries,
     Time,
+    WhitespaceData,
 } from "lightweight-charts";
 import { DataFeed as DataFeed } from "@/lib/data-feed";
 import { useChartContext } from "@/hooks/useChartContext";
@@ -19,13 +20,7 @@ import { useChartContext } from "@/hooks/useChartContext";
 // Type definitions for your trading data
 type SeriesType = "candlestick" | "line" | "area";
 
-type SeriesData<T extends SeriesType> = T extends "candlestick"
-    ? CandlestickData[]
-    : T extends "line"
-      ? LineData[]
-      : T extends "area"
-        ? AreaData[]
-        : never;
+type SeriesData = any[];
 
 type SeriesOptions<T extends SeriesType> = T extends "candlestick"
     ? DeepPartial<CandlestickSeriesPartialOptions>
@@ -41,7 +36,7 @@ interface ISeriesContext {
 }
 interface SeriesProps<T extends SeriesType> {
     type: T;
-    data?: SeriesData<T>;
+    data?: SeriesData;
     options?: SeriesOptions<T>;
     children?: React.ReactNode;
     dataFeed?: DataFeed<any>;

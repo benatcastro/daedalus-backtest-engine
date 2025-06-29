@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from backtest.BacktestEngine import BacktestEngine
 from typing import Dict, List
-from backtest.schemas import BacktestCreate, OrderCreate, ChartCreate
+from backtest.schemas import BacktestCreate, OrderCreate, Series
 import datetime
 
 
@@ -52,7 +52,7 @@ class BacktestSaver(ABC):
 
     @property
     @abstractmethod
-    def charts(self) -> List[ChartCreate]:
+    def series(self) -> List[Series]:
         pass
 
     @property

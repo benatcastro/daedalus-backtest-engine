@@ -75,6 +75,28 @@ export function BacktestList({ strategy }: BacktestListProps) {
         return `${startFormatted} - ${endFormatted}`;
     };
 
+    // Helper function to format upload date
+    const formatUploadDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - date.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // If less than 7 days ago, show relative time
+        if (diffDays === 1) {
+            return "1 day ago";
+        } else if (diffDays < 7) {
+            return `${diffDays} days ago`;
+        } else {
+            // Otherwise show the formatted date
+            return date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+            });
+        }
+    };
+
     return (
         <Container className="py-6">
             <div className="space-y-6">
@@ -96,49 +118,64 @@ export function BacktestList({ strategy }: BacktestListProps) {
                         <p className="text-muted-foreground mb-4">
                             {search ? "No backtests match your search" : "No backtests found"}
                         </p>
-                        {!search && <UploadBacktestButton strategy={strategy} />}
+                        {!search && (
+                            <UploadBacktestButton
+                                strategy={strategy}
+                                onNewBacktest={() => (mutate ? mutate() : undefined)}
+                            />
+                        )}
                     </div>
                 ) : (
                     <div className="border rounded-lg overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Date Range</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredBacktests.map((bt) => (
-                                    <TableRow key={bt.id} className="hover:bg-muted/50">
-                                        <TableCell>
-                                            <div>
-                                                <div className="font-medium">{bt.name}</div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {bt.description}
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="text-sm">
-                                                {formatDateRange(bt.starting_date, bt.ending_date)}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex items-center gap-2"
-                                            >
-                                                <Link href={`/backtest/${bt.id}`}>
-                                                    <Eye className="h-4 w-4" />
-                                                    View
-                                                </Link>
-                                            </Button>
-                                        </TableCell>
+                        <div className="max-h-[600px] overflow-y-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Date Range</TableHead>
+                                        <TableHead>Uploaded</TableHead>
+                                        <TableHead className="w-[100px]">Actions</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredBacktests.map((bt) => (
+                                        <TableRow key={bt.id} className="hover:bg-muted/50">
+                                            <TableCell>
+                                                <div>
+                                                    <div className="font-medium">{bt.name}</div>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {bt.description}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm">
+                                                    {formatDateRange(bt.starting_date, bt.ending_date)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm text-muted-foreground">
+                                                    {formatUploadDate(bt.created_at)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex items-center gap-2"
+                                                    asChild
+                                                >
+                                                    <Link href={`/backtest/${bt.id}`}>
+                                                        <Eye className="h-4 w-4" />
+                                                        View
+                                                    </Link>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </div>
                 )}
             </div>
