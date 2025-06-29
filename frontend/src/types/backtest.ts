@@ -9,6 +9,8 @@ interface Backtest {
     strategy_id: number; // Foreign key for strategy
     engine: BacktestEngine; // Enum for engine status
     parameters: Record<string, any>; // JSON type for parameters
+    created_at: string; // ISO date string for when the backtest was created
+    updated_at: string; // ISO date string for when the backtest was last updated
 }
 
 export default Backtest;

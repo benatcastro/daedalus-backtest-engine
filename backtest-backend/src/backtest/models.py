@@ -21,7 +21,7 @@ from enum import Enum as PyEnum
 
 from models import BaseModel
 
-class ChartType(str, PyEnum):
+class SeriesType(str, PyEnum):
     AREA = "area"
     CANDLE = "candle"
     LINE = "line"
@@ -49,7 +49,7 @@ class BacktestModel(BaseModel):
     parameters = Column(JSON)
 
     # Relationship
-    charts = relationship("ChartModel", back_populates="backtest", cascade="all, delete-orphan")
+    series = relationship("SeriesModel", back_populates="backtest", cascade="all, delete-orphan")
     orders = relationship("OrderModel", back_populates="backtest", cascade="all, delete-orphan")
 
 class OrderModel(BaseModel):
@@ -69,14 +69,16 @@ class OrderModel(BaseModel):
     # Relationship
     backtest = relationship("BacktestModel", back_populates="orders")
 
-class ChartModel(BaseModel):
-    __tablename__ = "charts"
+class SeriesModel(BaseModel):
+    __tablename__ = "series"
 
     id = Column(Integer, primary_key=True)
     backtest_id = Column(Integer, ForeignKey("backtests.id"), nullable=False)
     name = Column(String, nullable=False)
-    type = Column(SQLAlchemyEnum(ChartType), nullable=False)
+    type = Column(SQLAlchemyEnum(SeriesType), nullable=False)
     data_type = Column(SQLAlchemyEnum(DataType), nullable=False)
+    data = Column(JSON, default=dict)
+    parameters = Column(JSON, default=dict)
 
     # Relationship
-    backtest = relationship("BacktestModel", back_populates="charts")
+    backtest = relationship("BacktestModel", back_populates="series")

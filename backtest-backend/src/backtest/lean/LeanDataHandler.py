@@ -14,10 +14,10 @@ from config import settings
 from logger import logger
 from datetime import datetime
 from backtest.models import BacktestModel
-from backtest.Candle import Candle
+from backtest.schemas import CandleData
 from typing import List, Optional, Dict
 from backtest.DataHandler import DataHandler
-from schemas.LeanBacktest import LeanBacktest, DataRequest
+from backtest.lean.schemas import LeanBacktest, DataRequest
 from backtest.lean.LeanExceptions import UnexpectedZipContentError
 from backtest.Exceptions import (
     CandlestickDataNotAvailableException,
@@ -47,7 +47,7 @@ class LeanDataHandler(DataHandler):
         start_time: datetime,
         end_time: datetime,
         resolution: str = "minute",
-    ) -> List[Candle]:
+    ) -> List[CandleData]:
         """
         Retrieve candlestick data for the specified parameters.
 
@@ -117,7 +117,7 @@ class LeanDataHandler(DataHandler):
                 message=f"No trade data available for {symbol} at {resolution} resolution",
             )
 
-        result: List[Candle] = []
+        result: List[CandleData] = []
 
         for data_request in data_requests:
             zip_path = settings.LEAN_BASE_DATA_PATH.joinpath(data_request.path)
@@ -168,8 +168,8 @@ class LeanDataHandler(DataHandler):
                             # TODO investigate how to handle last candle of the day 00:00
                             if start_time <= candle_date <= end_time:
                                 result.append(
-                                    Candle(
-                                        timestamp=candle_date,
+                                    CandleData(
+                                        time=candle_date,
                                         open=open,
                                         high=float(high),
                                         low=float(low),

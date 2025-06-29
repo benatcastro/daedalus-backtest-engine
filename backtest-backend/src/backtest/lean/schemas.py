@@ -17,7 +17,6 @@ from pydantic import (
     model_validator,
     ConfigDict,
 )
-from backtest.models import BacktestModel
 
 
 class TradeStatistics(BaseModel):

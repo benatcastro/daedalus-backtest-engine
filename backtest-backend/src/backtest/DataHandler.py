@@ -9,7 +9,7 @@ data formats and provides a unified API.
 from typing import List, Optional, Dict
 from datetime import datetime
 from abc import ABC, abstractmethod
-from backtest.Candle import Candle
+from backtest.schemas import CandleData
 
 
 class DataHandler(ABC):
@@ -36,7 +36,7 @@ class DataHandler(ABC):
         start_time: datetime,
         end_time: datetime,
         resolution: str = "1m",
-    ) -> List[Candle]:
+    ) -> List[CandleData]:
         """
         Retrieve candlestick data for the specified parameters.
 

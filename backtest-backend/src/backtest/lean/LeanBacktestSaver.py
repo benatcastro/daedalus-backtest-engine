@@ -1,7 +1,7 @@
 from datetime import datetime
 import re
 import time
-from schemas.backtest import Order, OrderSide, OrderStatus
+from backtest.schemas import Series, OrderCreate, OrderSide, OrderStatus
 from backtest.BacktestSaver import BacktestSaver
 from backtest.BacktestEngine import BacktestEngine
 from typing import List, Dict, Optional, Any
@@ -11,12 +11,20 @@ import os
 import ijson
 from logger import logger
 from decimal import Decimal
+from backtest.models import SeriesType, DataType
+from backtest.schemas import LineData, CandleData, BarData
 
 # TODO: Update the data request to use the pydantic schema
-from schemas.LeanBacktest import DataRequest
+from backtest.lean.schemas import DataRequest
 
 
 class LeanBacktestSaver(BacktestSaver):
+    seriesTypeToEnum = {
+        0: SeriesType.LINE,
+        1: SeriesType.SCATTER,
+        2: SeriesType.CANDLE,
+        3: SeriesType.BAR
+    }
     def __init__(
         self, name: str, description: str, strategy_id: int, files: List[UploadFile]
     ):
@@ -29,7 +37,8 @@ class LeanBacktestSaver(BacktestSaver):
         self._ending_date: Optional[datetime] = None
         self._succeeded_data_requests: Optional[List[DataRequest]] = None
         self._failed_data_requests: Optional[List[DataRequest]] = None
-        self._orders: List[Order] = []
+        self._orders: List[OrderCreate] = []
+        self._series: List[Series] = []
 
         # Parameters data
         self._trade_statistics: Optional[Dict[Any, Any]] = None
@@ -38,6 +47,41 @@ class LeanBacktestSaver(BacktestSaver):
         self._runtime_statistics: Optional[Dict[Any, Any]] = None
         self._state: Optional[Dict[Any, Any]] = None
         self._algorithm_configuration: Optional[Dict[Any, Any]] = None
+
+    async def _process_series(self):
+        file: UploadFile = self._files.get(f"{self._backtest_id}.json")
+        print(file)
+        items = ijson.items(file.file, "charts")
+        charts = next(items.__iter__())
+        for chart in charts.values():
+            for series in chart['series'].values():
+                type = LeanBacktestSaver.seriesTypeToEnum.get(int(series["seriesType"]))
+                if not type:
+                    logger.error(f"Type {series["seriesType"]} not handled")
+                    return
+                name = series["name"]
+                parameters = {"unit": series["unit"]}
+
+                data = []
+                match type:
+                    case SeriesType.LINE:
+                        for value in series["values"]:
+                            data.append(LineData(time=datetime.fromtimestamp(int(value[0])), value=float(value[1])))
+                    case SeriesType.SCATTER:
+                        pass
+                    case SeriesType.CANDLE:
+                        for value in series["values"]:
+                            data.append(CandleData(time=datetime.fromtimestamp(int(value[0])), open=float(value[1]), high=float(value[2]), low=float(value[3]), close=float(value[4])))
+                    case SeriesType.CANDLE:
+                        for value in series["values"]:
+                            data.append(CandleData(time=datetime.fromtimestamp(int(value[0])), open=float(value[1]), high=float(value[2]), low=float(value[3]), close=float(value[4])))
+                    case SeriesType.BAR:
+                        for value in series["values"]:
+                            data.append(BarData(time=datetime.fromtimestamp(int(value[0])), height=float(value[1])))
+
+                data_as_dict = list(map(lambda x: x.model_dump(), data))
+                self._series.append(Series(name=name, type=type, data_type=DataType.STORED, data=data_as_dict, parameters=parameters))
+
 
     # TODO: Update the data request to use the pydantic schema
     async def _process_data_requests(
@@ -82,7 +126,6 @@ class LeanBacktestSaver(BacktestSaver):
                 "symbolValue",
                 "direction",
                 "quantity",
-                "status",
             }
             extra_fields = {k: v for k, v in values.items() if k not in known_fields}
 
@@ -103,7 +146,7 @@ class LeanBacktestSaver(BacktestSaver):
 
             # TODO esto es una puta mierda
             # TODO Manage order status
-            order = Order(
+            order = OrderCreate(
                 order_id=int(entry["orderId"]),
                 time=datetime.fromtimestamp(int(entry["time"])),
                 engine=BacktestEngine.LEAN,
@@ -128,6 +171,8 @@ class LeanBacktestSaver(BacktestSaver):
         summary_file = self._files.get(f"{self._backtest_id}-summary.json")
         summary_data = await self._get_json_data(summary_file)
 
+        # General report
+
         self._extract_backtest_bounds(summary_data)
         print(f"Dates: {self._starting_date} -> {self._ending_date}")
 
@@ -136,6 +181,9 @@ class LeanBacktestSaver(BacktestSaver):
 
         # Process the trade orders
         await self._process_orders()
+
+        # Process the series
+        await self._process_series()
 
         # Save summary data for parameters
         self._trade_statistics = summary_data.get("totalPerformance").get(
@@ -202,8 +250,12 @@ class LeanBacktestSaver(BacktestSaver):
         return self._ending_date
 
     @property
-    def orders(self) -> List[Order]:
+    def orders(self) -> List[OrderCreate]:
         return self._orders
+
+    @property
+    def series(self) -> List[Series]:
+        return self._series
 
     @property
     def parameters(self):

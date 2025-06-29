@@ -102,29 +102,6 @@ export function BacktestVisualization({ strategy, backtest }: BacktestVisualizat
                 if (entries) {
                     queryParams.set("entries", entries.toString());
                 }
-                interface Entry {
-                    timestamp: string;
-                    open: number;
-                    high: number;
-                    low: number;
-                    close: number;
-                    volume: number;
-                }
-
-                const toCandleStickData = ({
-                    timestamp,
-                    open,
-                    high,
-                    low,
-                    close,
-                    volume,
-                }: Entry): CandlestickData => ({
-                    time: (new Date(timestamp).getTime() / 1000) as Time,
-                    open,
-                    high,
-                    low,
-                    close,
-                });
 
                 // Form the endpoint
                 const endpoint = `${process.env.NEXT_PUBLIC_BACKTEST_BACKEND_URL}/api/v1/backtest/${backtest.id}/candles?${queryParams.toString()}`;
@@ -138,8 +115,7 @@ export function BacktestVisualization({ strategy, backtest }: BacktestVisualizat
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
 
-                const data: Entry[] = await response.json();
-                const candles: CandlestickData[] = data.map(toCandleStickData);
+                const candles: CandlestickData[] = await response.json();
                 console.log(`Fetched ${candles.length} candles`);
                 return candles;
             } catch (e) {

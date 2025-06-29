@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import Backtest from "@/types/backtest";
 type UploadBacktestButtonProps = {
     strategy: Strategy;
+    onNewBacktest?: () => void;
 };
 
 /**
