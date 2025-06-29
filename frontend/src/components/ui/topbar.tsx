@@ -39,21 +39,52 @@ export function TopBar() {
                         <span className="font-bold text-xl cursor-pointer">QuanticView</span>
                     </Link>
                     <nav className="hidden md:flex items-center gap-4">
-                        {strategy && backtest ? (
-                            <Breadcrumb>
-                                <BreadcrumbList>
-                                    <BreadcrumbItem>
-                                        <BreadcrumbLink href={`/strategy/${strategy.id}`}>
-                                            {strategy.name}
-                                        </BreadcrumbLink>
-                                    </BreadcrumbItem>
-                                    <BreadcrumbSeparator>
-                                        <SlashIcon />
-                                    </BreadcrumbSeparator>
-                                    <BreadcrumbPage>{backtest.name}</BreadcrumbPage>
-                                </BreadcrumbList>
-                            </Breadcrumb>
-                        ) : null}
+                        <Breadcrumb>
+                            <BreadcrumbList>
+                                {session ? (
+                                    strategy ? (
+                                        <>
+                                            <BreadcrumbItem>
+                                                <BreadcrumbLink
+                                                    href={`/users/${session?.user?.name ?? ""}/strategies`}
+                                                >
+                                                    {session?.user?.name ?? ""}
+                                                </BreadcrumbLink>
+                                            </BreadcrumbItem>
+                                            <BreadcrumbSeparator>
+                                                <SlashIcon />
+                                            </BreadcrumbSeparator>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <BreadcrumbPage>{session.user?.name}</BreadcrumbPage>
+                                            <BreadcrumbSeparator>
+                                                <SlashIcon />
+                                            </BreadcrumbSeparator>
+                                        </>
+                                    )
+                                ) : null}
+                                {strategy ? (
+                                    backtest ? (
+                                        <BreadcrumbItem>
+                                            <BreadcrumbLink href={`/strategy/${strategy.id}`}>
+                                                {strategy.name}
+                                            </BreadcrumbLink>
+                                        </BreadcrumbItem>
+                                    ) : (
+                                        <BreadcrumbPage>{strategy.name}</BreadcrumbPage>
+                                    )
+                                ) : null}
+                                {backtest ? (
+                                    <>
+                                        <BreadcrumbSeparator>
+                                            <SlashIcon />
+                                        </BreadcrumbSeparator>
+                                        <BreadcrumbPage>{backtest.name}</BreadcrumbPage>
+                                    </>
+                                ) : null}
+                            </BreadcrumbList>
+                        </Breadcrumb>
                     </nav>
                 </div>
 

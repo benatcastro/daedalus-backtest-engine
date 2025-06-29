@@ -15,7 +15,7 @@ export function OrdersList({ orders, isLoading, error }: OrdersListProps) {
     const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
 
     const toggleOrderExpansion = (orderId: number) => {
-        setExpandedOrders(prev => {
+        setExpandedOrders((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(orderId)) {
                 newSet.delete(orderId);
@@ -40,7 +40,8 @@ export function OrdersList({ orders, isLoading, error }: OrdersListProps) {
                 <div className="space-y-2">
                     {orders.map((order) => {
                         const isExpanded = expandedOrders.has(order.id);
-                        const hasParameters = order.parameters && Object.keys(order.parameters).length > 0;
+                        const hasParameters =
+                            order.parameters && Object.keys(order.parameters).length > 0;
 
                         return (
                             <div
@@ -75,7 +76,7 @@ export function OrdersList({ orders, isLoading, error }: OrdersListProps) {
                                                           : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300"
                                                 }`}
                                             >
-                                                {order.parameters['status']}
+                                                {order.parameters["status"]}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -107,19 +108,26 @@ export function OrdersList({ orders, isLoading, error }: OrdersListProps) {
                                                 Parameters
                                             </h4>
                                             <div className="grid grid-cols-1 gap-2">
-                                                {Object.entries(order.parameters).map(([key, value]) => (
-                                                    <div key={key} className="flex justify-between items-center text-xs">
-                                                        <span className="font-medium text-foreground capitalize">
-                                                            {key.replace(/([A-Z])/g, ' $1').trim()}:
-                                                        </span>
-                                                        <span className="text-muted-foreground font-mono">
-                                                            {typeof value === 'object'
-                                                                ? JSON.stringify(value)
-                                                                : String(value)
-                                                            }
-                                                        </span>
-                                                    </div>
-                                                ))}
+                                                {Object.entries(order.parameters).map(
+                                                    ([key, value]) => (
+                                                        <div
+                                                            key={key}
+                                                            className="flex justify-between items-center text-xs"
+                                                        >
+                                                            <span className="font-medium text-foreground capitalize">
+                                                                {key
+                                                                    .replace(/([A-Z])/g, " $1")
+                                                                    .trim()}
+                                                                :
+                                                            </span>
+                                                            <span className="text-muted-foreground font-mono">
+                                                                {typeof value === "object"
+                                                                    ? JSON.stringify(value)
+                                                                    : String(value)}
+                                                            </span>
+                                                        </div>
+                                                    ),
+                                                )}
                                             </div>
                                         </div>
                                     </div>
