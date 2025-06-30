@@ -23,8 +23,9 @@ class LeanBacktestSaver(BacktestSaver):
         0: SeriesType.LINE,
         1: SeriesType.SCATTER,
         2: SeriesType.CANDLE,
-        3: SeriesType.BAR
+        3: SeriesType.BAR,
     }
+
     def __init__(
         self, name: str, description: str, strategy_id: int, files: List[UploadFile]
     ):
@@ -54,10 +55,10 @@ class LeanBacktestSaver(BacktestSaver):
         items = ijson.items(file.file, "charts")
         charts = next(items.__iter__())
         for chart in charts.values():
-            for series in chart['series'].values():
+            for series in chart["series"].values():
                 type = LeanBacktestSaver.seriesTypeToEnum.get(int(series["seriesType"]))
                 if not type:
-                    logger.error(f"Type {series["seriesType"]} not handled")
+                    logger.error(f"Type {series['seriesType']} not handled")
                     return
                 name = series["name"]
                 parameters = {"unit": series["unit"]}
@@ -66,22 +67,55 @@ class LeanBacktestSaver(BacktestSaver):
                 match type:
                     case SeriesType.LINE:
                         for value in series["values"]:
-                            data.append(LineData(time=datetime.fromtimestamp(int(value[0])), value=float(value[1])))
+                            data.append(
+                                LineData(
+                                    time=datetime.fromtimestamp(int(value[0])),
+                                    value=float(value[1]),
+                                )
+                            )
                     case SeriesType.SCATTER:
                         pass
                     case SeriesType.CANDLE:
                         for value in series["values"]:
-                            data.append(CandleData(time=datetime.fromtimestamp(int(value[0])), open=float(value[1]), high=float(value[2]), low=float(value[3]), close=float(value[4])))
+                            data.append(
+                                CandleData(
+                                    time=datetime.fromtimestamp(int(value[0])),
+                                    open=float(value[1]),
+                                    high=float(value[2]),
+                                    low=float(value[3]),
+                                    close=float(value[4]),
+                                )
+                            )
                     case SeriesType.CANDLE:
                         for value in series["values"]:
-                            data.append(CandleData(time=datetime.fromtimestamp(int(value[0])), open=float(value[1]), high=float(value[2]), low=float(value[3]), close=float(value[4])))
+                            data.append(
+                                CandleData(
+                                    time=datetime.fromtimestamp(int(value[0])),
+                                    open=float(value[1]),
+                                    high=float(value[2]),
+                                    low=float(value[3]),
+                                    close=float(value[4]),
+                                )
+                            )
                     case SeriesType.BAR:
                         for value in series["values"]:
-                            data.append(BarData(time=datetime.fromtimestamp(int(value[0])), height=float(value[1])))
+                            data.append(
+                                BarData(
+                                    time=datetime.fromtimestamp(int(value[0])),
+                                    height=float(value[1]),
+                                )
+                            )
 
                 data_as_dict = list(map(lambda x: x.model_dump(), data))
-                self._series.append(Series(name=name, type=type, data_type=DataType.STORED, data=data_as_dict, parameters=parameters))
-
+                self._series.append(
+                    Series(
+                        name=name,
+                        type=type,
+                        data_type=DataType.STORED,
+                        data=data_as_dict,
+                        parameters=parameters,
+                    )
+                )
 
     # TODO: Update the data request to use the pydantic schema
     async def _process_data_requests(

@@ -1,7 +1,7 @@
 import time
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from datetime import datetime, timedelta
-from backtest.schemas import OrderRead, BacktestCreate, BacktestRead, Series, SeriesCreate, SeriesMetadata, SeriesRead
+from backtest.schemas import OrderRead, BacktestCreate, BacktestRead, SeriesMetadata
 from sqlalchemy import and_
 
 # from backtest.lean.LeanBacktestSaver import *
@@ -18,12 +18,13 @@ from backtest.Exceptions import (
 )
 from logger import logger
 from backtest.models import OrderModel, SeriesModel, SeriesType
-from backtest.schemas import CandleData, TimeBasedData, LineData, BarData
+from backtest.schemas import CandleData, LineData, BarData
 
 router = APIRouter(prefix="/backtest")
 
 # CRUD for stratagies -> next js
 # CRUD for backtests -> fast api
+
 
 @router.get("/{backtest_id}/series", response_model=List[SeriesMetadata])
 async def get_all_series(backtest_id: int, db: Session = Depends(get_db)):
@@ -49,7 +50,9 @@ async def get_all_series(backtest_id: int, db: Session = Depends(get_db)):
 
     try:
         # Query all series for the backtest
-        series = db.query(SeriesModel).filter(SeriesModel.backtest_id == backtest_id).all()
+        series = (
+            db.query(SeriesModel).filter(SeriesModel.backtest_id == backtest_id).all()
+        )
 
         # Convert to metadata format (automatically excludes data field)
         return series
@@ -60,7 +63,11 @@ async def get_all_series(backtest_id: int, db: Session = Depends(get_db)):
             status_code=500, detail=f"Error retrieving series: {str(e)}"
         )
 
-@router.get("/{backtest_id}/series/{series_id}/data", response_model=List[Union[LineData, CandleData, BarData]])
+
+@router.get(
+    "/{backtest_id}/series/{series_id}/data",
+    response_model=List[Union[LineData, CandleData, BarData]],
+)
 async def get_series_data(
     backtest_id: int,
     series_id: int,
@@ -94,17 +101,20 @@ async def get_series_data(
 
     try:
         # Query the specific series for the backtest
-        series = db.query(SeriesModel).filter(
-            and_(
-                SeriesModel.backtest_id == backtest_id,
-                SeriesModel.id == series_id
+        series = (
+            db.query(SeriesModel)
+            .filter(
+                and_(
+                    SeriesModel.backtest_id == backtest_id, SeriesModel.id == series_id
+                )
             )
-        ).first()
+            .first()
+        )
 
         if not series:
             raise HTTPException(
                 status_code=404,
-                detail=f"Series with ID {series_id} not found for backtest {backtest_id}"
+                detail=f"Series with ID {series_id} not found for backtest {backtest_id}",
             )
 
         # Get the data from the series
@@ -119,7 +129,6 @@ async def get_series_data(
             case SeriesType.BAR:
                 data = list(map(lambda x: BarData(**x), series.data))
 
-
         # If no filtering parameters provided, return all data
         if start is None and end is None and entries is None:
             return data
@@ -128,7 +137,9 @@ async def get_series_data(
         # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        logger.error(f"Error retrieving series data {series_id} for backtest {backtest_id}: {str(e)}")
+        logger.error(
+            f"Error retrieving series data {series_id} for backtest {backtest_id}: {str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail=f"Error retrieving series data: {str(e)}"
         )
@@ -424,7 +435,9 @@ async def upload_backtest(
     db.commit()
 
     processing_time = time.time() - start_time_processing
-    logger.info(f"Saved {len(orm_orders)} orders and {len(orm_series)} series in {processing_time:.2f} seconds")
+    logger.info(
+        f"Saved {len(orm_orders)} orders and {len(orm_series)} series in {processing_time:.2f} seconds"
+    )
 
     return new_backtest
 
@@ -439,5 +452,7 @@ async def get_one_backtest(backtest_id: int, db: Session = Depends(get_db)):
 # Retrieve all backtests of a strategy
 @router.get("/{strategy_id}", response_model=List[BacktestRead])
 async def get_backtests_by_strategy(strategy_id: int, db: Session = Depends(get_db)):
-    backtests = db.query(BacktestModel).filter(BacktestModel.strategy_id == strategy_id).all()
+    backtests = (
+        db.query(BacktestModel).filter(BacktestModel.strategy_id == strategy_id).all()
+    )
     return backtests

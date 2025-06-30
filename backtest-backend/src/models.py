@@ -1,20 +1,10 @@
 # app/models.py
 from sqlalchemy import (
     Column,
-    ForeignKey,
-    Integer,
-    Enum,
-    JSON,
-    String,
-    Text,
     DateTime,
-    Float,
 )
-from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 from database import Base
-from datetime import datetime, timezone
-from backtest.BacktestEngine import BacktestEngine
 from sqlalchemy.sql import func
 
 
@@ -31,6 +21,8 @@ class TimestampMixin:
             DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
         )
 
+
 class BaseModel(Base, TimestampMixin):
     """Abstract base model with timestamp functionality"""
+
     __abstract__ = True

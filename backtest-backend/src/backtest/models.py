@@ -11,15 +11,13 @@ from sqlalchemy import (
     Float,
 )
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declared_attr
-from database import Base
 from datetime import datetime, timezone
 from backtest.BacktestEngine import BacktestEngine
-from sqlalchemy.sql import func
 from enum import Enum as PyEnum
 
 
 from models import BaseModel
+
 
 class SeriesType(str, PyEnum):
     AREA = "area"
@@ -28,9 +26,11 @@ class SeriesType(str, PyEnum):
     BAR = "bar"
     SCATTER = "scatter"
 
+
 class DataType(str, PyEnum):
     STORED = "stored"
     EXTERNAL = "external"
+
 
 class BacktestModel(BaseModel):
     __tablename__ = "backtests"
@@ -49,8 +49,13 @@ class BacktestModel(BaseModel):
     parameters = Column(JSON)
 
     # Relationship
-    series = relationship("SeriesModel", back_populates="backtest", cascade="all, delete-orphan")
-    orders = relationship("OrderModel", back_populates="backtest", cascade="all, delete-orphan")
+    series = relationship(
+        "SeriesModel", back_populates="backtest", cascade="all, delete-orphan"
+    )
+    orders = relationship(
+        "OrderModel", back_populates="backtest", cascade="all, delete-orphan"
+    )
+
 
 class OrderModel(BaseModel):
     __tablename__ = "orders"
@@ -68,6 +73,7 @@ class OrderModel(BaseModel):
 
     # Relationship
     backtest = relationship("BacktestModel", back_populates="orders")
+
 
 class SeriesModel(BaseModel):
     __tablename__ = "series"
