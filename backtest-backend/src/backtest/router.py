@@ -19,6 +19,7 @@ from backtest.Exceptions import (
 from logger import logger
 from backtest.models import OrderModel, SeriesModel, SeriesType
 from backtest.schemas import CandleData, LineData, BarData
+from backtest.lean.schemas import LeanBacktest
 
 router = APIRouter(prefix="/backtest")
 
@@ -442,16 +443,59 @@ async def upload_backtest(
     return new_backtest
 
 
-# Retrieve one backtests of a strategy
+# Retrieve one backtest of a strategy
 @router.get("/details/{backtest_id}", response_model=BacktestRead)
 async def get_one_backtest(backtest_id: int, db: Session = Depends(get_db)):
-    backtests = db.query(BacktestModel).filter(BacktestModel.id == backtest_id).first()
-    return backtests
+    """
+    Get a single backtest by ID with properly serialized LeanBacktest data.
+    """
+    backtest = db.query(BacktestModel).filter(BacktestModel.id == backtest_id).first()
+
+    if not backtest:
+        raise HTTPException(
+            status_code=404, detail=f"Backtest with ID {backtest_id} not found"
+        )
+
+    # Use the new serialization pipeline for proper data structure
+    try:
+        match backtest.engine:
+            case BacktestEngine.LEAN:
+                lean_backtest = LeanBacktest.from_backtest_model(backtest)
+
+                # Get the parameters using the LeanBacktest method
+                parameters = LeanBacktest.get_parameters(lean_backtest).model_dump()
+
+                # Create BacktestRead with all required fields
+                response = BacktestRead(
+                    id=backtest.id,  # From original model
+                    name=lean_backtest.name,
+                    description=lean_backtest.description,
+                    starting_date=lean_backtest.starting_date,
+                    ending_date=lean_backtest.ending_date,
+                    strategy_id=lean_backtest.strategy_id,
+                    engine=lean_backtest.engine,  # Fixed: was using ending_date
+                    parameters=parameters,
+                    created_at=backtest.created_at,  # From original model
+                    updated_at=backtest.updated_at,  # From original model
+                )
+                return response
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_one_backtest: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while retrieving backtest"
+        )
 
 
 # Retrieve all backtests of a strategy
 @router.get("/{strategy_id}", response_model=List[BacktestRead])
 async def get_backtests_by_strategy(strategy_id: int, db: Session = Depends(get_db)):
+    """
+    Get all backtests for a strategy
+    """
     backtests = (
         db.query(BacktestModel).filter(BacktestModel.strategy_id == strategy_id).all()
     )

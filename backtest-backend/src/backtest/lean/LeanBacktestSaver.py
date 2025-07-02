@@ -15,7 +15,16 @@ from backtest.models import SeriesType, DataType
 from backtest.schemas import LineData, CandleData, BarData
 
 # TODO: Update the data request to use the pydantic schema
-from backtest.lean.schemas import DataRequest
+from backtest.lean.schemas import (
+    DataRequest,
+    RollingWindow,
+    State,
+    AlgorithmConfiguration,
+    TotalPerformance,
+    Statistics,
+    RuntimeStatistics,
+    LeanBacktestParameters,
+)
 
 
 class LeanBacktestSaver(BacktestSaver):
@@ -42,16 +51,17 @@ class LeanBacktestSaver(BacktestSaver):
         self._series: List[Series] = []
 
         # Parameters data
-        self._trade_statistics: Optional[Dict[Any, Any]] = None
-        self._portfolio_statistics: Optional[Dict[Any, Any]] = None
-        self._general_statistics: Optional[Dict[Any, Any]] = None
-        self._runtime_statistics: Optional[Dict[Any, Any]] = None
-        self._state: Optional[Dict[Any, Any]] = None
-        self._algorithm_configuration: Optional[Dict[Any, Any]] = None
+        self._rolling_window: RollingWindow
+        self._total_performance: TotalPerformance
+        self._statistics: Statistics
+        self._runtime_statistics: RuntimeStatistics
+        self._state: State
+        self._algorithm_configuration: AlgorithmConfiguration
 
     async def _process_series(self):
         file: UploadFile = self._files.get(f"{self._backtest_id}.json")
         print(file)
+        await file.seek(0)
         items = ijson.items(file.file, "charts")
         charts = next(items.__iter__())
         for chart in charts.values():
@@ -205,6 +215,23 @@ class LeanBacktestSaver(BacktestSaver):
         summary_file = self._files.get(f"{self._backtest_id}-summary.json")
         summary_data = await self._get_json_data(summary_file)
 
+        report_file = self._files.get(f"{self._backtest_id}.json")
+        report_data = await self._get_json_data(report_file)
+
+        # TODO Handle profit loss and orders
+        self._rolling_window = RollingWindow.from_dict(report_data.get("rollingWindow"))
+        self._total_performance = TotalPerformance(
+            **report_data.get("totalPerformance")
+        )
+        self._statistics: Statistics = Statistics(**report_data.get("statistics"))
+        self._runtime_statistics: RuntimeStatistics = RuntimeStatistics(
+            **report_data.get("runtimeStatistics")
+        )
+        self._state: State = State(**report_data.get("state"))
+        self._algorithm_configuration = AlgorithmConfiguration(
+            **report_data.get("algorithmConfiguration")
+        )
+
         # General report
 
         self._extract_backtest_bounds(summary_data)
@@ -218,18 +245,6 @@ class LeanBacktestSaver(BacktestSaver):
 
         # Process the series
         await self._process_series()
-
-        # Save summary data for parameters
-        self._trade_statistics = summary_data.get("totalPerformance").get(
-            "tradeStatistics"
-        )
-        self._portfolio_statistics = summary_data.get("totalPerformance").get(
-            "portfolioStatistics"
-        )
-        self._general_statistics = summary_data.get("statistics")
-        self._runtime_statistics = summary_data.get("runtimeStatistics")
-        self._state = summary_data.get("state")
-        self._algorithm_configuration = summary_data.get("algorithmConfiguration")
 
     async def _obtain_data_requests(self) -> None:
         pattern = re.compile(r"succeeded-data-requests-\d+\.txt")
@@ -296,26 +311,25 @@ class LeanBacktestSaver(BacktestSaver):
         # Convert DataRequest objects to dictionaries for JSON serialization
         succeeded_requests = []
         if self._succeeded_data_requests:
-            succeeded_requests = [
-                request.to_dict() for request in self._succeeded_data_requests
-            ]
+            succeeded_requests = self._succeeded_data_requests
 
         failed_requests = []
         if self._failed_data_requests:
-            failed_requests = [
-                request.to_dict() for request in self._failed_data_requests
-            ]
+            failed_requests = self._failed_data_requests
 
-        return {
-            "trade_statistics": self._trade_statistics,
-            "portfolio_statistics": self._portfolio_statistics,
-            "general_statistics": self._general_statistics,
-            "runtime_statistics": self._runtime_statistics,
-            "state": self._state,
-            "algorithm_configuration": self._algorithm_configuration,
-            "succeeded_data_requests": succeeded_requests,
-            "failed_data_requests": failed_requests,
-        }
+        # Create and return the LeanBacktestParameters schema
+        parameters = LeanBacktestParameters(
+            rolling_window=self._rolling_window,
+            total_performance=self._total_performance,
+            statistics=self._statistics,
+            runtime_statistics=self._runtime_statistics,
+            state=self._state,
+            algorithm_configuration=self._algorithm_configuration,
+            succeeded_data_requests=succeeded_requests,
+            failed_data_requests=failed_requests,
+        )
+
+        return parameters.model_dump()
 
     async def _get_json_data(self, file: UploadFile) -> Dict[Any, Any]:
         try:
@@ -323,6 +337,8 @@ class LeanBacktestSaver(BacktestSaver):
             return json.loads(data)
         except json.JSONDecodeError:
             print("❌ Failed to parse Config File")
+        # finally:
+        # await file.close()
 
     async def _get_backtest_id(self):
         data = await self._get_json_data(self._files["config"])

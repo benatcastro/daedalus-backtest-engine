@@ -32,6 +32,8 @@ import Candle from "@/types/candle";
 import { Order } from "@/types/order";
 import { OrdersList } from "./orders-list";
 import { PerformanceMetricsCard } from "./performance-metrics-card";
+import { serializeToLeanBacktest, trySerializeToLeanBacktest, BacktestSerializationError } from "@/lib/backtest-serializer";
+import LeanBacktest from "@/types/lean/LeanBacktest";
 
 interface BacktestResultsProps {
     strategy: Strategy;
@@ -43,6 +45,22 @@ export function BacktestResults({ strategy, backtest }: BacktestResultsProps) {
     const mainRef = useRef<HTMLDivElement>(null);
     const equitySeriesRef = useRef<SeriesMetadata>(null);
 
+    // Serialize the generic backtest to a LeanBacktest type
+    const leanBacktest: LeanBacktest | null = useMemo(() => {
+        try {
+            return serializeToLeanBacktest(backtest);
+        } catch (error) {
+            if (error instanceof BacktestSerializationError) {
+                console.error(`Failed to serialize backtest ${backtest.id}:`, error.message);
+                return null;
+            }
+            throw error;
+        }
+    }, [backtest]);
+
+    console.log("Lean Bactest: ", leanBacktest)
+
+    leanBacktest?.rollingWindow
     const bactestDates = useMemo(() => {
         const dateRange = isoTimeToDateRange(backtest.starting_date, backtest.ending_date);
         const timeRange = dateRangeToTimeRange(dateRange);
@@ -182,6 +200,43 @@ export function BacktestResults({ strategy, backtest }: BacktestResultsProps) {
         { month: "May", return: "+0.8%" },
         { month: "Jun", return: "-0.6%" },
     ];
+
+    // Show error state if LeanBacktest serialization failed
+    if (!leanBacktest) {
+        return (
+            <div className="flex flex-col p-4 gap-4">
+                <Card className="w-full border-red-200">
+                    <CardHeader>
+                        <CardTitle className="text-red-600">Invalid Backtest Data</CardTitle>
+                        <CardDescription>
+                            This backtest data is not compatible with the Lean engine format.
+                            Some required fields may be missing from the backend response.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">Backtest Name:</span>
+                                <span className="text-sm font-semibold">{backtest.name}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">Start Date:</span>
+                                <span className="text-sm font-semibold">{backtest.starting_date}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">End Date:</span>
+                                <span className="text-sm font-semibold">{backtest.ending_date}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">Engine:</span>
+                                <span className="text-sm font-semibold">{backtest.engine}</span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col p-4 gap-4">
