@@ -36,7 +36,7 @@ export function BacktestVisualization({ strategy, backtest }: BacktestVisualizat
     }, [strategy, backtest]);
 
     const orderFetcher = useCallback(
-        async (start?: Time, end?: Time, entries?: Number): Promise<SeriesMarker<Time>[]> => {
+        async (start?: Time, end?: Time, entries?: number): Promise<SeriesMarker<Time>[]> => {
             if (!backtest) return [];
 
             try {
@@ -85,7 +85,7 @@ export function BacktestVisualization({ strategy, backtest }: BacktestVisualizat
     );
 
     const candlesticFetcher = useCallback(
-        async (start?: Time, end?: Time, entries?: Number): Promise<CandlestickData[]> => {
+        async (start?: Time, end?: Time, entries?: number): Promise<CandlestickData[]> => {
             if (!backtest) return [];
 
             try {

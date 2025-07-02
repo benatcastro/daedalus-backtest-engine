@@ -1,8 +1,7 @@
 // TypeScript interfaces for Lean Backtest results
 // Corresponds to the Python Pydantic schemas in backtest-backend/src/backtest/lean/schemas.py
 
-import Backtest from '../backtest';
-import BacktestEngine from '../backtest-engine';
+import Backtest from "@/types/backtest";
 
 // Trade Statistics Interface
 export interface TradeStatistics {
@@ -200,7 +199,7 @@ export interface TotalPerformance {
 }
 
 // Main LeanBacktest Interface
-export interface LeanBacktest extends Omit<Backtest, 'parameters'> {
+export interface LeanBacktest extends Omit<Backtest, "parameters"> {
   totalPerformance: TotalPerformance;
   statistics: Statistics;
   runtimeStatistics: RuntimeStatistics;
