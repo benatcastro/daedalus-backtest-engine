@@ -860,10 +860,10 @@ class RollingWindow(BaseLeanBacktestSchema):
     def from_dict(cls, data: Dict[str, Any]) -> "RollingWindow":
         """Create RollingWindow from dictionary data."""
         window_data = {}
-        def window_is_empty(window: Dict[str, Any]):
-            tradeStatistics = window.get("tradeStatistics")
-            return False
 
+        def window_is_empty(window: Dict[str, Any]):
+            startDateTime = window.get("tradeStatistics").get("startDateTime")
+            return startDateTime is None
 
         for key, window_values in data.items():
             # check for null rolling windows
@@ -1013,6 +1013,7 @@ class LeanBacktestParameters(BaseLeanBacktestSchema):
         default_factory=list,
         description="Failed data requests",
     )
+
     @field_validator("rolling_window", mode="before")
     @classmethod
     def validate_rolling_window(cls, v):
@@ -1191,17 +1192,19 @@ class LeanBacktest(BaseLeanBacktestSchema):
 
         # Create LeanBacktestParameters object
         parameters = LeanBacktestParameters(
-            rolling_window=RollingWindow.from_dict(parameters_data.get("rollingWindow")),
+            rolling_window=RollingWindow.from_dict(
+                parameters_data.get("rollingWindow")
+            ),
             total_performance=parameters_data.get("totalPerformance"),
             runtime_statistics=parameters_data.get("runtimeStatistics"),
             algorithm_configuration=parameters_data.get("algorithmConfiguration"),
             state=parameters_data.get("state"),
             statistics=parameters_data.get("statistics"),
             succeeded_data_requests=safe_create_data_requests(
-                parameters_data.get("succeeded_data_requests", [])
+                parameters_data.get("succeededDataRequests", [])
             ),
             failed_data_requests=safe_create_data_requests(
-                parameters_data.get("failed_data_requests", [])
+                parameters_data.get("failedDataRequests", [])
             ),
         )
 

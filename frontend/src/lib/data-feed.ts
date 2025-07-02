@@ -38,7 +38,7 @@ export class DataFeed<T extends TimeBasedData> {
     private readonly _buffer: TimeSortedArray;
 
     /** Fetch function that returns data for a given time range */
-    private readonly _fetchData: (start?: Time, end?: Time, entries?: Number) => Promise<T[]>;
+    private readonly _fetchData: (start?: Time, end?: Time, entries?: number) => Promise<T[]>;
 
     /** Data bounds represent the absolute min/max range of available data */
     private readonly _dataBounds: IRange<Time>;
@@ -82,7 +82,7 @@ export class DataFeed<T extends TimeBasedData> {
      * ```
      */
     constructor(
-        fetchData: (start?: Time, end?: Time, entries?: Number) => Promise<T[]>,
+        fetchData: (start?: Time, end?: Time, entries?: number) => Promise<T[]>,
         dataBounds: IRange<Time>,
         config?: Partial<DataFeedConfig>,
     ) {
