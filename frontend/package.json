@@ -16,7 +16,7 @@
         "prisma:migrate:status": "dotenv -e ../.env -- prisma migrate status",
         "style:check:all": "prettier --check .",
         "style:fix:all": "prettier --write .",
-        "style:check": "prettier --check ",
+        "style:check": "prettier --check .",
         "style:fix": "prettier --write "
     },
     "dependencies": {

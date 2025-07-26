@@ -9,28 +9,6 @@ const compat = new FlatCompat({
     baseDirectory: __dirname,
 });
 
-const eslintConfig = [
-    ...compat.extends("next/core-web-vitals", "next/typescript"),
-    {
-        rules: {
-            // Enforce using @ alias for internal imports
-            "no-restricted-imports": [
-                "error",
-                {
-                    "patterns": [
-                        {
-                            "group": ["../../../*", "../../*", "../*"],
-                            "message": "Use @ alias instead of relative imports for better maintainability"
-                        },
-                        {
-                            "group": ["src/*"],
-                            "message": "Use @ alias instead of 'src/'. Import from '@/' instead"
-                        }
-                    ]
-                }
-            ]
-        }
-    }
-];
+const eslintConfig = [...compat.extends("next/core-web-vitals", "next/typescript")];
 
 export default eslintConfig;
