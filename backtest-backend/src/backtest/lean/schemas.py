@@ -21,6 +21,7 @@ from pydantic import (
 
 if TYPE_CHECKING:
     from backtest.models import BacktestModel
+    from backtest.schemas import BacktestRead
 
 
 class BaseLeanBacktestSchema(BaseModel):
@@ -1118,8 +1119,6 @@ class LeanBacktest(BaseLeanBacktestSchema):
         Returns:
             BacktestRead: Standardized backtest response schema
         """
-        from backtest.schemas import BacktestRead
-
         # Extract parameters from the LeanBacktest data
         parameters = {
             "rollingWindow": self.rolling_window.model_dump()
