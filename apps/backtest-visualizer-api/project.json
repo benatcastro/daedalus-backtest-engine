@@ -1,0 +1,31 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "backtest-visualizer-api",
+  "projectType": "application",
+  "sourceRoot": "apps/backtest-visualizer-api",
+  "targets": {
+    "install": {
+      "executor": "@nxlv/python:install",
+      "options": {}
+    },
+    "lock": {
+      "executor": "@nxlv/python:lock",
+      "options": {}
+    },
+    "serve": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run uvicorn main:app --app-dir backend --reload --port 8001",
+        "cwd": "apps/backtest-visualizer-api"
+      }
+    },
+    "visualize": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run python main.py",
+        "cwd": "apps/backtest-visualizer-api"
+      }
+    }
+  },
+  "tags": ["lang:python", "scope:backtest"]
+}

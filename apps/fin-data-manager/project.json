@@ -1,0 +1,35 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "fin-data-manager",
+  "projectType": "application",
+  "sourceRoot": "apps/fin-data-manager/src",
+  "targets": {
+    "build": {
+      "executor": "@monodon/rust:build",
+      "outputs": ["{workspaceRoot}/dist/target/debug"],
+      "options": {},
+      "configurations": {
+        "production": {
+          "release": true
+        }
+      }
+    },
+    "run": {
+      "executor": "@monodon/rust:run",
+      "options": {}
+    },
+    "check": {
+      "executor": "@monodon/rust:check",
+      "options": {}
+    },
+    "test": {
+      "executor": "@monodon/rust:test",
+      "options": {}
+    },
+    "lint": {
+      "executor": "@monodon/rust:lint",
+      "options": {}
+    }
+  },
+  "tags": ["lang:rust", "scope:data"]
+}

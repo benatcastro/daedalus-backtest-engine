@@ -1,0 +1,45 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "backtest-backend",
+  "projectType": "application",
+  "sourceRoot": "apps/backtest-backend/src",
+  "targets": {
+    "install": {
+      "executor": "@nxlv/python:install",
+      "options": {}
+    },
+    "lock": {
+      "executor": "@nxlv/python:lock",
+      "options": {}
+    },
+    "serve": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run uvicorn main:app --app-dir src --reload --port 8000",
+        "cwd": "apps/backtest-backend"
+      }
+    },
+    "migrate": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run alembic upgrade head",
+        "cwd": "apps/backtest-backend"
+      }
+    },
+    "lint": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run ruff check .",
+        "cwd": "apps/backtest-backend"
+      }
+    },
+    "format": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run ruff format .",
+        "cwd": "apps/backtest-backend"
+      }
+    }
+  },
+  "tags": ["lang:python", "scope:backtest"]
+}

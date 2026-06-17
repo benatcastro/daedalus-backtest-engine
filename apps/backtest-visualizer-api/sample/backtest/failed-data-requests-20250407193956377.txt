@@ -1,0 +1,4 @@
+/crypto/binance/hour/btcusdc_trade.zip
+/crypto/binance/minute/ethusdt/20250102_quote.zip
+/crypto/binance/minute/ethusdt/20250102_trade.zip
+/crypto/binance/minute/btcbusd/20250102_trade.zip

@@ -1,0 +1,25 @@
+[project]
+name = "backtest-backend"
+version = "1.0.0"
+description = "Daedalus backtest ingestion & analytics API (FastAPI)."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.12",
+    "pandas==2.2.3",
+    "pydantic==2.11.5",
+    "quantconnect-stubs==17074",
+    "SQLAlchemy==2.0.41",
+    "uvicorn==0.22.0",
+    "alembic==1.12.1",
+    "python-dotenv==1.0.0",
+    "pydantic-settings==2.1.0",
+    "aiofiles==24.1.0",
+    "httpx==0.28.1",
+    "ijson==3.4.0",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.6.0"]
+
+[tool.uv]
+package = false

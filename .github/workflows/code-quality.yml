@@ -16,20 +16,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "22"
 
       - name: Install dependencies
-        working-directory: ./frontend
         run: npm ci
 
-      - name: Format check
-        working-directory: ./frontend
-        run: npm run style:check .
+      - name: Format check (frontend)
+        run: npx nx style:check frontend
 
-      # Unused till the current linting checks are fixed
-      #- name: Linting check
-      #  working-directory: ./frontend
-      #  run: npm run lint
+      # Linting is not yet enforced (pre-existing issues are being cleaned up).
+      # Re-enable once the codebase is lint-clean:
+      # - name: Lint (frontend)
+      #   run: npx nx lint frontend
 
   backend-quality:
     name: Backend Code Quality
@@ -38,19 +36,31 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.11"
 
-      - name: Install dependencies
-        working-directory: ./backtest-backend
-        run: pip install -r requirements/cicd-requirements.txt
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
 
-      - name: Format Check
-        working-directory: ./backtest-backend
-        run: ruff format --check
+      - name: Ruff format check
+        working-directory: ./apps/backtest-backend
+        run: uvx ruff format --check .
 
-      - name: Linting Check
-        working-directory: ./backtest-backend
-        run: ruff check
+      - name: Ruff lint check
+        working-directory: ./apps/backtest-backend
+        run: uvx ruff check .
 
+  rust-quality:
+    name: Rust Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo check
+        run: cargo check -p fin-data-manager

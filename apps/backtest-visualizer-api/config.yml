@@ -1,0 +1,3 @@
+strategy_directory: "/home/becastro/Workspace/algotrading/lean/strats"
+backtest_folder: "backtests"
+backtest_choose_mode: "most_recent"
