@@ -1,122 +1,112 @@
 # Daedalus Docker Setup
 
-This Docker setup provides two PostgreSQL databases and pgAdmin for database administration.
+This Docker setup provides two PostgreSQL databases and pgAdmin for database
+administration.
 
-**Note**: This setup uses the top-level `.env` file (`/home/bena/Projects/daedalus/.env`) for configuration, not a local one in the docker directory.
+**Note:** This setup reads the **monorepo root `.env`** file for configuration
+(values like `BACKTEST_DB_*`, `NEXTAUTH_DB_*`, and `PGADMIN_*`). Run the commands
+below from the `docker/` directory so Compose picks up `../.env` automatically,
+or pass `--env-file ../.env`.
 
 ## Services
 
-- **postgres-backtests**: PostgreSQL database for FastAPI backend (backtests data)
-  - Port: 5432
-  - Database: backtests_db
-  - User: postgres
+- **postgres-backtests**: PostgreSQL database for the FastAPI backend (backtest data)
+  - Host port: `${BACKTEST_DB_PORT}` (e.g. 5432)
+  - Database/User: `${BACKTEST_DB_NAME}` / `${BACKTEST_DB_USER}`
 
-- **postgres-nextjs**: PostgreSQL database for Next.js application (user data, auth)
-  - Port: 5433
-  - Database: nextjs_db
-  - User: postgres
+- **postgres-nextjs**: PostgreSQL database for the Next.js app (user data, auth)
+  - Host port: `${NEXTAUTH_DB_PORT}` (e.g. 5433)
+  - Database/User: `${NEXTAUTH_DB_NAME}` / `${NEXTAUTH_DB_USER}`
 
 - **pgadmin**: Web-based PostgreSQL administration tool
   - URL: http://localhost:5050
-  - Email: admin@daedalus.local
-  - Password: admin123
+  - Login: `${PGADMIN_DEFAULT_EMAIL}` / `${PGADMIN_DEFAULT_PASSWORD}`
 
 ## Quick Start
 
-1. **Setup environment**:
+1. **Set up environment** (from the repository root):
    ```bash
-   # From the project root directory
    cp .env.example .env
-   # Edit .env with your preferred settings
+   # Edit .env with your database credentials and pgAdmin login
    ```
 
 2. **Start services**:
    ```bash
    cd docker
-   ./manage.sh up
+   docker compose up -d
    ```
 
-3. **Access pgAdmin**:
-   - Open http://localhost:5050
-   - Login with: admin@daedalus.local / admin123
-   - Both databases are pre-configured
+3. **Access pgAdmin**: open http://localhost:5050 and log in with the
+   `PGADMIN_*` credentials from your `.env`. Both databases are pre-registered
+   via `pgadmin/servers.json`.
 
 ## Management Commands
 
+Run these from the `docker/` directory:
+
 ```bash
-# Start all services
-./manage.sh up
+# Start all services (detached)
+docker compose up -d
 
 # Stop all services
-./manage.sh down
+docker compose down
 
 # View logs
-./manage.sh logs
-./manage.sh logs postgres-backtests  # specific service
+docker compose logs -f
+docker compose logs -f postgres-backtests   # specific service
 
-# Connect to databases via CLI
-./manage.sh db-connect backtests     # Connect to backtests database
-./manage.sh db-connect nextjs        # Connect to Next.js database
+# Connect to a database via CLI
+docker compose exec postgres-backtests psql -U "$BACKTEST_DB_USER" -d "$BACKTEST_DB_NAME"
+docker compose exec postgres-nextjs    psql -U "$NEXTAUTH_DB_USER" -d "$NEXTAUTH_DB_NAME"
 
-# Backup databases
-./manage.sh db-backup backtests      # Backup backtests database
-./manage.sh db-backup nextjs         # Backup Next.js database
+# Open a shell in a container
+docker compose exec postgres-backtests bash
 
-# Open shell in containers
-./manage.sh shell postgres-backtests
-./manage.sh shell postgres-nextjs
-./manage.sh shell pgadmin
+# Check service status / health
+docker compose ps
 
-# Check service health
-./manage.sh health
+# Restart a service
+docker compose restart pgadmin
 
-# Clean up (removes all data!)
-./manage.sh clean
+# Stop and REMOVE ALL DATA (volumes)
+docker compose down -v
 ```
 
 ## Database Connection Strings
 
-### For Local Development (from host machine):
-- **Backtests DB**: `postgresql://postgres:postgres123@localhost:5432/backtests_db`
-- **Next.js DB**: `postgresql://postgres:postgres456@localhost:5433/nextjs_db`
+With the example credentials in `.env.example`:
 
-### For Containerized Applications:
-- **Backtests DB**: `postgresql://postgres:postgres123@postgres-backtests:5432/backtests_db`
-- **Next.js DB**: `postgresql://postgres:postgres456@postgres-nextjs:5432/nextjs_db`
+### From the host machine (local development)
+- **Backtests DB**: `postgresql://<user>:<password>@localhost:5432/backtests_db`
+- **Next.js DB**: `postgresql://<user>:<password>@localhost:5433/nextjs_db`
+
+### From other containers (same Compose network)
+- **Backtests DB**: `postgresql://<user>:<password>@postgres-backtests:5432/backtests_db`
+- **Next.js DB**: `postgresql://<user>:<password>@postgres-nextjs:5432/nextjs_db`
 
 ## Security Notes
 
-⚠️ **Important**: The default passwords are for development only!
+⚠️ The default/example passwords are for local development only!
 
-For production:
-1. Change all passwords in the `.env` file
-2. Use strong, unique passwords
-3. Consider using Docker secrets for sensitive data
-4. Restrict network access to databases
-5. Enable SSL/TLS connections
+For production: change all passwords in `.env`, use strong unique secrets,
+consider Docker secrets, restrict network access, and enable SSL/TLS.
 
 ## Persistence
 
 Database data is persisted in Docker volumes:
-- `postgres_backtests_data`: Backtests database data
-- `postgres_nextjs_data`: Next.js database data
-- `pgadmin_data`: pgAdmin configuration and settings
+- `postgres_backtests_data`, `postgres_nextjs_data`, `pgadmin_data`
 
-To completely remove all data, use: `./manage.sh clean`
+To completely remove all data: `docker compose down -v`.
 
 ## Troubleshooting
 
-### Port Conflicts
-If ports 5432, 5433, or 5050 are already in use:
-1. Edit `docker-compose.yml` to change the host ports
-2. Update connection strings accordingly
+**Port conflicts (5432 / 5433 / 5050):** change the host ports in
+`docker-compose.yml` (and the matching `.env` values), then update your
+connection strings.
 
-### Database Connection Issues
-1. Ensure services are running: `./manage.sh health`
-2. Check logs: `./manage.sh logs postgres-backtests`
-3. Verify environment variables in `.env`
+**Database connection issues:** ensure services are healthy (`docker compose ps`),
+check logs (`docker compose logs postgres-backtests`), and verify the variables
+in your root `.env`.
 
-### pgAdmin Access Issues
-1. Clear browser cache
-2. Check pgAdmin logs: `./manage.sh logs pgadmin`
-3. Restart pgAdmin: `docker-compose restart pgadmin`
+**pgAdmin access issues:** clear the browser cache, check
+`docker compose logs pgadmin`, and restart with `docker compose restart pgadmin`.

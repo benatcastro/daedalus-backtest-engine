@@ -1,238 +1,221 @@
-# Daedalus Backtest Engine
+# Daedalus
 
-> Architect of bots — a web application for analyzing and visualizing algorithmic trading strategy backtests.
+> Architect of bots — an [Nx](https://nx.dev) monorepo of algorithmic-trading tools for building, backtesting, visualizing, and feeding data to trading strategies.
 
-Daedalus lets quantitative traders, researchers, and developers upload, parse, and review backtest results from algorithmic trading engines (with [QuantConnect Lean](https://www.lean.io/) as the initial focus). It turns raw backtest output into interactive dashboards, charts, and trade tables so strategies can be explored, compared, and shared.
+Daedalus is a polyglot monorepo. A single workspace hosts TypeScript/Next.js
+web apps, Python/FastAPI services, and Rust binaries, all driven through a
+consistent set of `nx` commands. The flagship product is a web application for
+**analyzing and visualizing algorithmic-trading strategy backtests** (with
+[QuantConnect Lean](https://www.lean.io/) as the first supported engine), plus
+supporting tools for fetching market data and managing financial datasets.
 
 ---
 
 ## Table of Contents
 
-- [Architecture](#architecture)
+- [Applications](#applications)
 - [Tech Stack](#tech-stack)
 - [Repository Layout](#repository-layout)
 - [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-  - [1. Clone & configure environment](#1-clone--configure-environment)
-  - [2. Start the databases (Docker)](#2-start-the-databases-docker)
-  - [3. Run the FastAPI backend](#3-run-the-fastapi-backend)
-  - [4. Run the Next.js frontend](#4-run-the-nextjs-frontend)
-- [Loading a Sample Backtest](#loading-a-sample-backtest)
-- [Environment Variables](#environment-variables)
-- [Database Migrations](#database-migrations)
-- [Development Workflow](#development-workflow)
-- [Project Conventions](#project-conventions)
+- [Quick Start](#quick-start)
+- [Working with Nx](#working-with-nx)
+- [Environment & API Keys](#environment--api-keys)
+- [Per-App Documentation](#per-app-documentation)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ---
 
-## Architecture
+## Applications
 
-The system is split into three independently runnable pieces:
+Every project lives under [`apps/`](apps/) and has its own README with detailed
+setup and run instructions.
+
+| App | Path | Language / Stack | What it does |
+|-----|------|------------------|--------------|
+| **frontend** | [`apps/frontend`](apps/frontend) | TypeScript · Next.js 16 · React 19 · Prisma · NextAuth | Main web UI: auth, dashboards, interactive backtest charts & tables |
+| **backtest-backend** | [`apps/backtest-backend`](apps/backtest-backend) | Python · FastAPI · SQLAlchemy · Alembic | Ingests, parses & analyzes backtest results; serves the analytics REST API |
+| **backtest-visualizer-web** | [`apps/backtest-visualizer-web`](apps/backtest-visualizer-web) | TypeScript · Next.js 16 | Lightweight standalone candlestick/chart prototype |
+| **backtest-visualizer-api** | [`apps/backtest-visualizer-api`](apps/backtest-visualizer-api) | Python · FastAPI · Plotly | Legacy backtest parsing/plotting tools + a small API |
+| **data-downloader** | [`apps/data-downloader`](apps/data-downloader) | Python · ccxt | Fetches OHLCV market data into the Lean data folder |
+| **fin-data-manager** | [`apps/fin-data-manager`](apps/fin-data-manager) | Rust · actix-web | Financial data management service (early scaffold) |
+
+### How they fit together
 
 ```
-                ┌─────────────────────────┐
-                │   Next.js frontend +     │   Auth, users, dashboards,
-                │   API routes (port 3000) │   interactive charts/tables
-                └───────────┬─────────────┘
-                            │ REST
-                ┌───────────▼─────────────┐
-                │   FastAPI backend        │   Ingests, parses & analyzes
-                │   (port 8000)            │   backtest results; serves analytics
-                └───────────┬─────────────┘
-                            │ SQLAlchemy
-        ┌───────────────────┴───────────────────┐
-        │                                        │
-┌───────▼────────┐                      ┌────────▼────────┐
-│ Postgres        │  backtest data       │ Postgres         │  users / auth
-│ (port 5432)     │                      │ (port 5433)      │
-└─────────────────┘                      └──────────────────┘
-```
+                ┌──────────────────────────────┐
+                │  frontend (Next.js, :3000)    │  auth, dashboards, charts
+                └───────────────┬──────────────┘
+                                │ REST
+                ┌───────────────▼──────────────┐
+                │  backtest-backend (FastAPI,   │  ingest / parse / analyze
+                │  :8000)                       │  backtest results
+                └───────────────┬──────────────┘
+                                │ SQLAlchemy
+        ┌───────────────────────┴───────────────────────┐
+ ┌──────▼───────┐                                 ┌───────▼───────┐
+ │ Postgres     │  backtest data (:5432)          │ Postgres      │ users/auth (:5433)
+ └──────────────┘                                 └───────────────┘
 
-- **FastAPI backend** (`backtest-backend/`) — ingests, parses, and analyzes backtest result files, exposing a REST API for backtest data and analytics. Designed to be extensible to multiple engines; Lean is the first supported engine.
-- **Next.js app** (`frontend/`) — handles user accounts and authentication (NextAuth + Google OAuth) via its own API routes and database, and renders the visualization UI.
-- **PostgreSQL + pgAdmin** (`docker/`) — two Postgres databases (one for backtest data, one for app/auth data) plus pgAdmin, all managed with Docker Compose.
+  Supporting tools:
+   • data-downloader (Python/ccxt)      → fills the Lean data folder
+   • backtest-visualizer-{web,api}      → standalone visualization prototype
+   • fin-data-manager (Rust)            → financial data service (WIP)
+```
 
 ## Tech Stack
 
-| Layer       | Technologies |
-|-------------|--------------|
-| Backend     | Python, FastAPI, SQLAlchemy, Alembic, Pydantic, Uvicorn, pandas, `quantconnect-stubs` |
-| Frontend    | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Radix UI, Prisma, NextAuth, lightweight-charts, Recharts, SWR |
-| Database    | PostgreSQL (×2), pgAdmin |
-| Tooling     | Docker Compose, Ruff (Python lint), Prettier/ESLint (frontend) |
+| Layer | Technologies |
+|-------|--------------|
+| Monorepo | Nx 22, npm workspaces |
+| Web | Next.js 16, React 19, TypeScript, Tailwind CSS 4, Radix UI, Prisma, NextAuth, lightweight-charts, Recharts, SWR |
+| Python services | FastAPI, SQLAlchemy, Alembic, Pydantic, Uvicorn, pandas, Plotly, ccxt — managed with [uv](https://docs.astral.sh/uv/) via [`@nxlv/python`](https://github.com/lucasvieirasilva/nx-plugins) |
+| Rust | Cargo workspace, actix-web — wired with [`@monodon/rust`](https://github.com/Cammisuli/monodon) |
+| Database | PostgreSQL ×2, pgAdmin (Docker Compose) |
 
 ## Repository Layout
 
 ```
-daedalus-backtest-engine/
-├── backtest-backend/        # FastAPI service
-│   ├── src/
-│   │   ├── main.py          # App entrypoint
-│   │   ├── config.py        # Settings (loaded from root .env)
-│   │   ├── database.py      # SQLAlchemy engine/session
-│   │   ├── backtest/        # Backtest domain: router, models, schemas, engine
-│   │   │   └── lean/        # Lean-engine-specific parsing & saving
-│   │   └── alembic/         # Database migrations
-│   ├── requirements/
-│   └── sample/              # Example Lean backtest output files
-├── frontend/                # Next.js app (UI + auth API routes)
-│   ├── src/
-│   ├── prisma/              # Prisma schema & migrations
-│   └── package.json
-├── docker/                  # docker-compose for Postgres + pgAdmin
-├── docs/                    # Additional documentation
-├── scripts/                 # Helper scripts
-├── .env.example             # Template for the shared root .env
-└── .nvmrc                   # Node version (v22.17.1)
+daedalus/
+├── apps/
+│   ├── frontend/                 # Next.js web app (UI + auth API routes)
+│   ├── backtest-backend/         # FastAPI backtest ingestion & analytics API
+│   ├── backtest-visualizer-web/  # Next.js chart prototype
+│   ├── backtest-visualizer-api/  # Legacy Python visualizer/plotting tools
+│   ├── data-downloader/          # ccxt market-data downloader
+│   └── fin-data-manager/         # Rust (actix-web) service
+├── docker/                       # Postgres + pgAdmin (docker-compose)
+├── docs/                         # Additional documentation
+├── scripts/                      # Helper scripts
+├── nx.json                       # Nx configuration
+├── package.json                  # Workspace root (Nx + JS deps)
+├── Cargo.toml                    # Rust workspace
+├── .env.example                  # Shared root environment template
+└── .nvmrc                        # Node version (v22.17.1)
 ```
 
 ## Prerequisites
 
-- **Docker** & **Docker Compose** (for the databases)
-- **Python 3.11+** (for the backend)
-- **Node.js v22.17.1** (see `.nvmrc`; `nvm use` will pick it up) and **npm**
+| Tool | Version | Used by |
+|------|---------|---------|
+| [Node.js](https://nodejs.org) | v22.17.1 (see `.nvmrc`; `nvm use`) | Nx, the Next.js apps |
+| npm | 10+ | workspace install |
+| [uv](https://docs.astral.sh/uv/) | 0.8+ | the Python apps (`@nxlv/python`) |
+| [Rust](https://rustup.rs/) (cargo) | 1.94+ (edition 2024) | `fin-data-manager` |
+| [Docker](https://www.docker.com/) + Compose | recent | local Postgres + pgAdmin |
 
-## Getting Started
+> You only need the toolchains for the apps you intend to run. Nx itself only
+> needs Node + npm.
 
-All three services read configuration from a **single shared `.env` file at the repository root**.
-
-### 1. Clone & configure environment
+## Quick Start
 
 ```bash
-git clone https://github.com/benatcastro/daedalus-backtest-engine.git
-cd daedalus-backtest-engine
+# 1. Clone and install JS/Nx dependencies (npm workspaces)
+git clone https://github.com/benatcastro/daedalus-backtest-engine.git daedalus
+cd daedalus
+nvm use            # selects Node v22.17.1
+npm install        # installs Nx, plugins, and both Next.js apps
+
+# 2. Configure environment (see "Environment & API Keys" below)
 cp .env.example .env
-# Edit .env and fill in database credentials, OAuth secrets, and URLs
+#   …then edit .env with DB credentials, NextAuth secret, Google OAuth keys
+
+# 3. Start the databases
+cd docker && docker compose up -d && cd ..
+
+# 4. Generate the Prisma client & apply migrations for the web app
+npx nx prisma-generate frontend
+cd apps/frontend && npm run prisma:migrate:deploy && cd ../..
+
+# 5. Run the apps you need (each in its own terminal)
+npx nx dev frontend            # http://localhost:3000
+npx nx serve backtest-backend  # http://localhost:8000  (docs at /docs)
 ```
 
-See [Environment Variables](#environment-variables) for what each value means.
+## Working with Nx
 
-### 2. Start the databases (Docker)
+All projects are driven through `nx <target> <project>`. Common targets:
+
+| Command | Description |
+|---------|-------------|
+| `npx nx show projects` | List all projects in the workspace |
+| `npx nx graph` | Open the interactive project graph |
+| `npx nx <target> <project>` | Run a single target (e.g. `nx build frontend`) |
+| `npx nx run-many -t build` | Build everything that has a `build` target |
+| `npx nx run-many -t lint` | Lint across projects |
+
+### Targets by project
+
+| Project | Targets |
+|---------|---------|
+| `frontend` | `build`, `dev`, `start`, `lint`, `prisma-generate` |
+| `backtest-visualizer-web` | `build`, `dev`, `start`, `lint` |
+| `backtest-backend` | `install`, `lock`, `serve`, `migrate`, `lint`, `format` |
+| `backtest-visualizer-api` | `install`, `lock`, `serve`, `visualize` |
+| `data-downloader` | `install`, `lock`, `run` |
+| `fin-data-manager` | `build`, `run`, `check`, `test`, `lint` |
+
+Examples:
 
 ```bash
-cd docker
-docker compose up -d
+npx nx build fin-data-manager     # cargo build -> dist/target/debug
+npx nx install backtest-backend   # uv sync (create the app's venv)
+npx nx serve backtest-backend     # uvicorn on :8000
+npx nx run data-downloader        # run the ccxt downloader
 ```
 
-This starts:
+### Polyglot notes
 
-| Service              | Description                  | Default Port |
-|----------------------|------------------------------|--------------|
-| `postgres-backtests` | Backtest data (FastAPI)      | 5432         |
-| `postgres-nextjs`    | User/auth data (Next.js)     | 5433         |
-| `pgadmin`            | DB admin UI                  | 5050         |
+- **Python** apps are real [uv](https://docs.astral.sh/uv/) projects. `nx install`
+  runs `uv sync` and creates a per-app `.venv`; `nx serve`/`run` use `uv run`.
+  Each app keeps a committed `uv.lock` for reproducibility.
+- **Rust** is a Cargo workspace rooted at `Cargo.toml`; build artifacts go to
+  `dist/target` (configured in `.cargo/config.toml`).
+- **Next.js** apps share a single hoisted `node_modules` via npm workspaces.
 
-pgAdmin is available at <http://localhost:5050> (credentials come from `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD`). See `docker/README.md` for more details.
+## Environment & API Keys
 
-### 3. Run the FastAPI backend
+All web/back-end services read from a **single `.env` at the repository root**
+(`cp .env.example .env`). The most important values:
 
-```bash
-cd backtest-backend
+| Variable | Needed by | How to obtain |
+|----------|-----------|---------------|
+| `BACKTEST_DATABASE_URL`, `BACKTEST_DB_*` | backtest-backend, Docker | choose your own Postgres credentials |
+| `NEXT_DATABASE_URL`, `NEXTAUTH_DB_*` | frontend, Docker | choose your own Postgres credentials |
+| `NEXTAUTH_SECRET` | frontend (NextAuth) | generate: `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | frontend | usually `http://localhost:3000` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | frontend (Google sign-in) | [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials); redirect URI `http://localhost:3000/api/auth/callback/google` |
+| `CORS_ORIGINS` | backtest-backend | comma-separated allowed origins |
+| `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` | Docker pgAdmin | choose your own |
 
-# Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
+The `data-downloader` tool has its own optional `apps/data-downloader/.env.example`
+(exchange API keys are only required for authenticated/private endpoints — public
+candle data needs none).
 
-# Install dependencies
-pip install -r requirements/requirements.txt
+> **Never commit your real `.env`.** Both root and per-app `.env` files are gitignored.
 
-# Run the API (tables are auto-created on startup)
-cd src
-uvicorn main:app --reload --port 8000
-```
+## Per-App Documentation
 
-The API will be available at <http://localhost:8000>, with interactive docs at <http://localhost:8000/docs>.
+Each app's README covers setup, how to run it, and the env/API keys it needs:
 
-### 4. Run the Next.js frontend
-
-```bash
-cd frontend
-nvm use                 # selects Node v22.17.1 from .nvmrc
-npm install
-
-# Sync the Prisma schema / generate the client (uses the root .env)
-npm run prisma:generate
-npm run prisma:migrate:dev
-
-npm run dev
-```
-
-The app will be available at <http://localhost:3000>.
-
-## Loading a Sample Backtest
-
-The repo ships with example Lean backtest output in `backtest-backend/sample/`. Once the backend is running, you can upload it via the API. `scripts/create_sample_backtest.sh` shows the exact `curl` request (update the absolute file paths to match your checkout):
-
-```bash
-curl -X POST http://localhost:8000/api/v1/backtest/ \
-  -F "engine=LEAN" \
-  -F "strategy_id=1" \
-  -F "name=Lean Backtest Upload Test" \
-  -F "description=Testing upload with sample files" \
-  -F "files=@backtest-backend/sample/1217966458-summary.json" \
-  -F "files=@backtest-backend/sample/1217966458-order-events.json" \
-  -F "files=@backtest-backend/sample/1217966458.json" \
-  -H "Accept: application/json"
-```
-
-You can then explore the parsed result in the frontend or browse the data in pgAdmin.
-
-## Environment Variables
-
-The root `.env` (copied from `.env.example`) is consumed by the backend, the frontend, and Docker Compose. Key groups:
-
-| Variable | Purpose |
-|----------|---------|
-| `NEXT_PUBLIC_NEXT_API_URL` | Public URL of the Next.js app |
-| `NEXT_PUBLIC_BACKTEST_BACKEND_URL` | Public URL of the FastAPI backend |
-| `CORS_ORIGINS` | Comma-separated list of allowed CORS origins for the backend |
-| `BACKTEST_DATABASE_URL` | SQLAlchemy connection string for the backtest DB |
-| `NEXT_DATABASE_URL` | Prisma connection string for the user/auth DB |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth credentials for NextAuth |
-| `BACKTEST_DB_*` / `NEXTAUTH_DB_*` | Per-database host/port/name/user/password used by Docker Compose |
-| `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` | pgAdmin login |
-
-> **Security:** Never commit your real `.env`. Change all default passwords and secrets before deploying anywhere non-local, and prefer a secrets manager in production.
-
-## Database Migrations
-
-**Backend (Alembic):**
-
-```bash
-cd backtest-backend/src
-alembic upgrade head                       # apply latest migrations
-alembic revision --autogenerate -m "msg"   # create a new migration
-```
-
-**Frontend (Prisma):** convenience scripts are defined in `frontend/package.json`:
-
-```bash
-npm run prisma:migrate:dev      # create & apply a dev migration
-npm run prisma:migrate:deploy   # apply migrations (deploy)
-npm run prisma:studio           # open Prisma Studio
-npm run prisma:migrate:status   # check migration state
-```
-
-## Development Workflow
-
-- **Branching:** feature branches are derived from `dev`. CI is configured under `.github/workflows/` (including code-quality checks and automated branch creation from issues).
-- **Issues & PRs:** issue templates live in `.github/ISSUE_TEMPLATE/`, and PR templates (feature/bugfix/chore/docs/security) live in `.github/PULL_REQUEST_TEMPLATE/`.
-- **Contributor guidance:** coding standards and domain context are documented in `.github/instructions/` (`general`, `backend`, `frontend`, and `backtest-visualization`). Read these before contributing.
-
-## Project Conventions
-
-- **Linting/formatting:** Python uses [Ruff](https://docs.astral.sh/ruff/) (`backtest-backend/ruff.toml`); the frontend uses Prettier and ESLint (`npm run style:check` / `npm run lint`).
-- **Secrets:** all API keys, URLs, and credentials must come from the `.env` file — never hardcode them.
-- **Extensibility:** the backend abstracts engines behind factories (`DataHandlerFactory`, `BacktestSaverFactory`) so additional backtest engines can be added alongside Lean.
+- [apps/frontend/README.md](apps/frontend/README.md)
+- [apps/backtest-backend/README.md](apps/backtest-backend/README.md)
+- [apps/backtest-visualizer-web/README.md](apps/backtest-visualizer-web/README.md)
+- [apps/backtest-visualizer-api/README.md](apps/backtest-visualizer-api/README.md)
+- [apps/data-downloader/README.md](apps/data-downloader/README.md)
+- [apps/fin-data-manager/README.md](apps/fin-data-manager/README.md)
+- [docker/README.md](docker/README.md) — database stack
 
 ## Troubleshooting
 
-- **Port conflicts (5432/5433/5050):** change the host ports in `docker/docker-compose.yml` and update the matching `.env` values.
-- **Backend can't connect to the DB:** confirm the Docker containers are healthy (`docker compose ps`) and that `BACKTEST_DATABASE_URL` points to the right host/port.
-- **Frontend env not loading:** the frontend loads the **root** `.env` (one directory up). Make sure it exists and is populated.
-- **Node version errors:** run `nvm use` to match `.nvmrc` (v22.17.1).
+- **`nx: command not found`** — run via `npx nx …`, or `npm install` first.
+- **Port conflicts (3000/8000/5432/5433/5050)** — change the host ports in
+  `docker/docker-compose.yml` / the relevant `.env` values and app commands.
+- **`uv: command not found`** — install uv (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
+- **Rust build fails** — ensure `cargo` ≥ 1.94 (edition 2024); `rustup update`.
+- **Frontend env not loading** — the Next.js apps load the **root** `.env`; make
+  sure it exists and is populated, then re-run `npx nx prisma-generate frontend`.
+- **Nx cache acting up** — `npx nx reset` clears the local cache.
 
 ## License
 

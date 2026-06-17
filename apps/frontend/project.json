@@ -1,0 +1,46 @@
+{
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "name": "frontend",
+    "projectType": "application",
+    "sourceRoot": "apps/frontend/src",
+    "targets": {
+        "build": {
+            "executor": "nx:run-commands",
+            "outputs": ["{projectRoot}/.next"],
+            "dependsOn": ["prisma-generate"],
+            "options": {
+                "command": "next build",
+                "cwd": "apps/frontend"
+            }
+        },
+        "dev": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "next dev --turbopack",
+                "cwd": "apps/frontend"
+            }
+        },
+        "start": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "next start",
+                "cwd": "apps/frontend"
+            }
+        },
+        "lint": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "eslint .",
+                "cwd": "apps/frontend"
+            }
+        },
+        "prisma-generate": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "dotenv -e ../../.env -- prisma generate",
+                "cwd": "apps/frontend"
+            }
+        }
+    },
+    "tags": ["lang:ts", "scope:web"]
+}

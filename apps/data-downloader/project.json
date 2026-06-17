@@ -1,0 +1,24 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "data-downloader",
+  "projectType": "application",
+  "sourceRoot": "apps/data-downloader",
+  "targets": {
+    "install": {
+      "executor": "@nxlv/python:install",
+      "options": {}
+    },
+    "lock": {
+      "executor": "@nxlv/python:lock",
+      "options": {}
+    },
+    "run": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run python main.py",
+        "cwd": "apps/data-downloader"
+      }
+    }
+  },
+  "tags": ["lang:python", "scope:data"]
+}

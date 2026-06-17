@@ -1,0 +1,19 @@
+{
+  "name": "daedalus",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Daedalus — an Nx monorepo of algorithmic-trading tools (backtesting, visualization, data management).",
+  "workspaces": [
+    "apps/frontend",
+    "apps/backtest-visualizer-web"
+  ],
+  "scripts": {
+    "graph": "nx graph"
+  },
+  "devDependencies": {
+    "@monodon/rust": "3.0.0",
+    "@nx/devkit": "22.7.5",
+    "@nxlv/python": "22.2.0",
+    "nx": "22.7.5"
+  }
+}
